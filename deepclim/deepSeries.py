@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Deep Learning Operator for Climate Data
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.04.18
-Last Update     : 2019.04.18
+Last Update     : 2019.05.08
 Contributor     :
 Description     : This module provides several methods to perform deep learning
                   on climate data.
@@ -69,15 +69,17 @@ class LSTM(torch.nn.Module):
         """
         # matrix dimension as feed for lstm is fixed
         # torch.tensor.view(-1) adpat the array to a new shape with one dimension unknown [..,-1,..]
-        lstm_out, self.hidden = self.lstm(x_input.view(len(x_input), self.batch_size, -1))
+        lstm_out, self.hidden = self.lstm(x_input.view(x_input.size(0), self.batch_size, -1))
         #lstm_out2, self.hidden2 = self.lstm(lstm_out)
         
         # Only take the output from the final timetep
-        # Can pass on the entirety of lstm_out to the next layer if it is a seq2seq prediction
-        y_pred = self.linear(lstm_out[-1].view(self.batch_size, -1))
-        return y_pred.view(-1) # tensor.view only rearrange the array, not transpose
-    
-    
+        # Can pass on the entirety of lstm_out to the next layer if it is a seq2seq prediction!!!
+        # F.linear is able to handle multi-dimensional matrix, but in case...
+        #y_pred = self.linear(lstm_out[-1].view(self.batch_size, -1))
+        y_pred = self.linear(lstm_out.view(lstm_out.size(0)*self.batch_size, -1))
+        #return y_pred.view(-1) # tensor.view only rearrange the array, not transpose
+        return y_pred.view(lstm_out.size(0),self.batch_size,-1)
+        
 class LinearReg(torch.nn.Module):
     def __init__(self,input_dim,):
         """

@@ -474,8 +474,7 @@ class operator:
         """
         Reshape the input matrix into time series.
         param Dim_month: there are two modes for removing the seasonal cycling
-        -True (default) input time series have month dimension [year,month,...]
-        -False input time series have only 1 dimension for time
+        Input time series should have month dimension [year,month,...]
         return: time series
         rtype: numpy.array
         """
@@ -507,6 +506,7 @@ class operator:
         
         return series_out
     
+    @staticmethod
     def denormalize(series_norm, series_ori):
         """
         Denormalize the input series.
