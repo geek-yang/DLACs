@@ -7,7 +7,8 @@ First Built     : 2019.04.18
 Last Update     : 2019.05.08
 Contributor     :
 Description     : This module provides several methods to perform deep learning
-                  on climate data.
+                  on climate data. It is designed for time series prediction with
+                  temporal sequence data.
 Return Values   : time series / array
 Caveat!         :
 """

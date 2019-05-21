@@ -9,7 +9,8 @@ Contributor     :
 Description     : This module provides several methods to perform statistical
                   analysis on MET and all kinds of fields.
 Return Values   : pngs
-Caveat!         :
+Caveat!         : The style of gridliner of Cartopy can be found at
+                  https://scitools.org.uk/cartopy/docs/v0.13/matplotlib/gridliner.html
 """
 
 import numpy as np
@@ -17,7 +18,8 @@ import scipy
 #from scipy import stats
 import os
 import matplotlib
-import seaborn as sns
+#import seaborn as sns
+#import bokeh
 import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 import matplotlib.ticker as mticker
@@ -308,6 +310,7 @@ class plots:
                 ax.set_aspect('1')
                 ax.coastlines()
                 gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                #gl.ylocator = mticker.FixedLocator([50,60,70,80,90])
                 theta = np.linspace(0, 2*np.pi, 100)
                 center, radius = [0.5, 0.5], 0.5
                 verts = np.vstack([np.sin(theta), np.cos(theta)]).T
@@ -333,6 +336,7 @@ class plots:
                 ax.coastlines()
                 gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
                                   linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                #gl.ylocator = mticker.FixedLocator([50,60,70,80,90])
                 gl.xlabels_top = False
                 gl.xformatter = LONGITUDE_FORMATTER
                 gl.yformatter = LATITUDE_FORMATTER
