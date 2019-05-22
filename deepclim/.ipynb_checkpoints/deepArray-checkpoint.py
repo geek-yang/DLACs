@@ -14,12 +14,21 @@ Description     : This module provides several methods to perform deep learning
                   is available through the link:
                   Convolutional LSTM Network: A Machine Learning Approach for Precipitation Nowcasting
                   https://arxiv.org/abs/1506.04214
+                  The module is designed with reference to the script:
+                  https://github.com/automan000/Convolution_LSTM_PyTorch/blob/master/convolution_lstm.py
 Return Values   : time series / array
-Caveat!         :
+Caveat!         : The variables are not generated for the usa of cuda. The original code is cuda specified.
 """
+
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
 
 class ConvLSTMCell(nn.Module):
     def __init__(self, input_channels, hidden_channels, kernel_size):
+        """
+        Build convolutional cell for ConvLSTM.
+        """
         super(ConvLSTMCell, self).__init__()
 
         assert hidden_channels % 2 == 0
@@ -30,7 +39,8 @@ class ConvLSTMCell(nn.Module):
         self.num_features = 4
 
         self.padding = int((kernel_size - 1) / 2)
-
+        # input shape of nn.Conv2d (input_channels,out_channels,kernel_size, stride, padding)
+        # kernal_size and stride can be tuples, indicating non-square filter / uneven stride
         self.Wxi = nn.Conv2d(self.input_channels, self.hidden_channels, self.kernel_size, 1, self.padding, bias=True)
         self.Whi = nn.Conv2d(self.hidden_channels, self.hidden_channels, self.kernel_size, 1, self.padding, bias=False)
         self.Wxf = nn.Conv2d(self.input_channels, self.hidden_channels, self.kernel_size, 1, self.padding, bias=True)
@@ -54,14 +64,14 @@ class ConvLSTMCell(nn.Module):
 
     def init_hidden(self, batch_size, hidden, shape):
         if self.Wci is None:
-            self.Wci = Variable(torch.zeros(1, hidden, shape[0], shape[1])).cuda()
-            self.Wcf = Variable(torch.zeros(1, hidden, shape[0], shape[1])).cuda()
-            self.Wco = Variable(torch.zeros(1, hidden, shape[0], shape[1])).cuda()
+            self.Wci = Variable(torch.zeros(1, hidden, shape[0], shape[1]))#.cuda()
+            self.Wcf = Variable(torch.zeros(1, hidden, shape[0], shape[1]))#.cuda()
+            self.Wco = Variable(torch.zeros(1, hidden, shape[0], shape[1]))#.cuda()
         else:
             assert shape[0] == self.Wci.size()[2], 'Input Height Mismatched!'
             assert shape[1] == self.Wci.size()[3], 'Input Width Mismatched!'
-        return (Variable(torch.zeros(batch_size, hidden, shape[0], shape[1])).cuda(),
-                Variable(torch.zeros(batch_size, hidden, shape[0], shape[1])).cuda())
+        return (Variable(torch.randn(batch_size, hidden, shape[0], shape[1])),
+                Variable(torch.randn(batch_size, hidden, shape[0], shape[1])))
 
 
 class ConvLSTM(nn.Module):
@@ -110,13 +120,13 @@ class ConvLSTM(nn.Module):
 if __name__ == '__main__':
     # gradient check
     convlstm = ConvLSTM(input_channels=512, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3, step=5,
-                        effective_step=[4]).cuda()
+                        effective_step=[4])#.cuda()
     loss_fn = torch.nn.MSELoss()
 
-    input = Variable(torch.randn(1, 512, 64, 32)).cuda()
-    target = Variable(torch.randn(1, 32, 64, 32)).double().cuda()
+    input = Variable(torch.randn(1, 512, 64, 32))#.cuda()
+    target = Variable(torch.randn(1, 32, 64, 32))#.double().cuda()
 
     output = convlstm(input)
-    output = output[0][0].double()
+    output = output[0][0]#.double()
     res = torch.autograd.gradcheck(loss_fn, (output, target), eps=1e-6, raise_exception=True)
     print(res)    

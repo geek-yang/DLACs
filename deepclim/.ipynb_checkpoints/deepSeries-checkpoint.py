@@ -23,7 +23,7 @@ class LSTM(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, batch_size, output_dim=1,
                  num_layers=1):
         """
-        Initialize the LSTM module in Pytorch and specify the basic model structure.
+        Initialize the single layer LSTM module in Pytorch and specify the basic model structure.
         param input_dim: dimension of input array
         """
         super(LSTM, self).__init__() #inheritance https://realpython.com/python-super/
