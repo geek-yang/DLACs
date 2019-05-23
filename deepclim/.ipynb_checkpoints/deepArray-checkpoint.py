@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function        : Deep Learning Operator for Climate Data
+Function        : Convolutional LSTM for one step prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.05.21
 Last Update     : 2019.05.21
@@ -17,7 +17,7 @@ Description     : This module provides several methods to perform deep learning
                   The module is designed with reference to the script:
                   https://github.com/automan000/Convolution_LSTM_PyTorch/blob/master/convolution_lstm.py
 Return Values   : time series / array
-Caveat!         : The variables are not generated for the usa of cuda. The original code is cuda specified.
+Caveat!         : This module get input as a spatial-temporal sequence and make a prediction for only one step!!
 """
 
 import torch
@@ -28,6 +28,9 @@ class ConvLSTMCell(nn.Module):
     def __init__(self, input_channels, hidden_channels, kernel_size):
         """
         Build convolutional cell for ConvLSTM.
+        param input_channels: number of channels (variables) from input fields
+        param hidden_channels: number of channels inside hidden layers, the dimension correponds to the output size
+        param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
         """
         super(ConvLSTMCell, self).__init__()
 
@@ -36,9 +39,9 @@ class ConvLSTMCell(nn.Module):
         self.input_channels = input_channels
         self.hidden_channels = hidden_channels
         self.kernel_size = kernel_size
-        self.num_features = 4
+        #self.num_features = 4
 
-        self.padding = int((kernel_size - 1) / 2)
+        self.padding = int((kernel_size - 1) / 2) # make sure the output size remains the same as input
         # input shape of nn.Conv2d (input_channels,out_channels,kernel_size, stride, padding)
         # kernal_size and stride can be tuples, indicating non-square filter / uneven stride
         self.Wxi = nn.Conv2d(self.input_channels, self.hidden_channels, self.kernel_size, 1, self.padding, bias=True)
@@ -75,6 +78,14 @@ class ConvLSTMCell(nn.Module):
 
 
 class ConvLSTM(nn.Module):
+    """
+    This is the main ConvLSTM module.
+    param input_channels: number of channels (variables) from input fields
+    param hidden_channels: number of channels inside hidden layers, for multiple layers use tuple, the dimension correponds to the output size
+    param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
+    param step: this parameter indicates the time step to predict ahead of the given data
+    param effective_step: this parameter determines the source of the final output from the chosen step
+    """
     # input_channels corresponds to the first input feature map
     # hidden state is a list of succeeding lstm layers.
     def __init__(self, input_channels, hidden_channels, kernel_size, step=1, effective_step=[1]):
@@ -90,9 +101,13 @@ class ConvLSTM(nn.Module):
             name = 'cell{}'.format(i)
             cell = ConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
             setattr(self, name, cell)
-            self._all_layers.append(cell)
+            self._all_layers.append(cell)        
 
-    def forward(self, input):
+    def forward(self, input, timestep):
+        """
+        Forward module of ConvLSTM.
+        param input: input data with dimensions [batch size, channel, height, width]
+        """
         internal_state = []
         outputs = []
         for step in range(self.step):
@@ -100,12 +115,13 @@ class ConvLSTM(nn.Module):
             for i in range(self.num_layers):
                 # all cells are initialized in the first step
                 name = 'cell{}'.format(i)
-                if step == 0:
+                #if step == 0:
+                if timestep == 0:
                     bsize, _, height, width = x.size()
                     (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
                                                              shape=(height, width))
                     internal_state.append((h, c))
-
+                    
                 # do forward
                 (h, c) = internal_state[i]
                 x, new_c = getattr(self, name)(x, h, c)

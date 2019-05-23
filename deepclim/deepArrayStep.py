@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function        : Convolutional LSTM for one step prediction
+Function        : Convolutional LSTM for multiple steps prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.05.21
 Last Update     : 2019.05.21
@@ -17,7 +17,7 @@ Description     : This module provides several methods to perform deep learning
                   The module is designed with reference to the script:
                   https://github.com/automan000/Convolution_LSTM_PyTorch/blob/master/convolution_lstm.py
 Return Values   : time series / array
-Caveat!         : This module get input as a spatial-temporal sequence and make a prediction for only one step!!
+Caveat!         : The variables are not generated for the usa of cuda. The original code is cuda specified.
 """
 
 import torch
@@ -101,9 +101,9 @@ class ConvLSTM(nn.Module):
             name = 'cell{}'.format(i)
             cell = ConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
             setattr(self, name, cell)
-            self._all_layers.append(cell)        
+            self._all_layers.append(cell)
 
-    def forward(self, input, timestep):
+    def forward(self, input):
         """
         Forward module of ConvLSTM.
         param input: input data with dimensions [batch size, channel, height, width]
@@ -115,13 +115,12 @@ class ConvLSTM(nn.Module):
             for i in range(self.num_layers):
                 # all cells are initialized in the first step
                 name = 'cell{}'.format(i)
-                #if step == 0:
-                if timestep == 0:
+                if step == 0:
                     bsize, _, height, width = x.size()
                     (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
                                                              shape=(height, width))
                     internal_state.append((h, c))
-                    
+
                 # do forward
                 (h, c) = internal_state[i]
                 x, new_c = getattr(self, name)(x, h, c)
