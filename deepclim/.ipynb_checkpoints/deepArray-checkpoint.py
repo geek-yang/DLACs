@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function        : Convolutional LSTM for one step prediction
+Function        : Convolutional LSTM for one 
+prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.05.21
 Last Update     : 2019.05.21
@@ -34,7 +35,7 @@ class ConvLSTMCell(nn.Module):
         """
         super(ConvLSTMCell, self).__init__()
 
-        assert hidden_channels % 2 == 0
+        #assert hidden_channels % 2 == 0
 
         self.input_channels = input_channels
         self.hidden_channels = hidden_channels
@@ -88,14 +89,14 @@ class ConvLSTM(nn.Module):
     """
     # input_channels corresponds to the first input feature map
     # hidden state is a list of succeeding lstm layers.
-    def __init__(self, input_channels, hidden_channels, kernel_size, step=1, effective_step=[1]):
+    def __init__(self, input_channels, hidden_channels, kernel_size):
         super(ConvLSTM, self).__init__()
         self.input_channels = [input_channels] + hidden_channels
         self.hidden_channels = hidden_channels
         self.kernel_size = kernel_size
         self.num_layers = len(hidden_channels)
-        self.step = step
-        self.effective_step = effective_step
+        #self.step = step
+        #self.effective_step = effective_step
         self._all_layers = []
         for i in range(self.num_layers):
             name = 'cell{}'.format(i)
@@ -103,40 +104,38 @@ class ConvLSTM(nn.Module):
             setattr(self, name, cell)
             self._all_layers.append(cell)        
 
-    def forward(self, input, timestep):
+    def forward(self, x, timestep):
         """
         Forward module of ConvLSTM.
-        param input: input data with dimensions [batch size, channel, height, width]
+        param x: input data with dimensions [batch size, channel, height, width]
         """
-        internal_state = []
-        outputs = []
-        for step in range(self.step):
-            x = input
-            for i in range(self.num_layers):
-                # all cells are initialized in the first step
-                name = 'cell{}'.format(i)
-                #if step == 0:
-                if timestep == 0:
-                    bsize, _, height, width = x.size()
-                    (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
-                                                             shape=(height, width))
-                    internal_state.append((h, c))
+        if timestep == 0:
+            self.internal_state = []
+        # loop inside 
+        for i in range(self.num_layers):
+            # all cells are initialized in the first step
+            name = 'cell{}'.format(i)
+            if timestep == 0:
+                print('Initialization')
+                bsize, _, height, width = x.size()
+                (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
+                                                         shape=(height, width))
+                self.internal_state.append((h, c))
                     
-                # do forward
-                (h, c) = internal_state[i]
-                x, new_c = getattr(self, name)(x, h, c)
-                internal_state[i] = (x, new_c)
-            # only record effective steps
-            if step in self.effective_step:
-                outputs.append(x)
+            # do forward
+            (h, c) = self.internal_state[i]
+            x, new_c = getattr(self, name)(x, h, c)
+            self.internal_state[i] = (x, new_c)
+            # only record output from last layer
+            if i == (self.num_layers - 1):
+                outputs = x
 
         return outputs, (x, new_c)
 
 
 if __name__ == '__main__':
     # gradient check
-    convlstm = ConvLSTM(input_channels=512, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3, step=5,
-                        effective_step=[4])#.cuda()
+    convlstm = ConvLSTM(input_channels=512, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3)#.cuda()
     loss_fn = torch.nn.MSELoss()
 
     input = Variable(torch.randn(1, 512, 64, 32))#.cuda()
