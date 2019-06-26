@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function        : Convolutional LSTM for one 
+Function        : Convolutional LSTM for one step prediction
 prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.05.21
-Last Update     : 2019.05.21
+Last Update     : 2019.06.21
 Contributor     :
 Description     : This module provides several methods to perform deep learning
                   on climate data. It is designed for weather/climate prediction with
@@ -68,14 +68,14 @@ class ConvLSTMCell(nn.Module):
 
     def init_hidden(self, batch_size, hidden, shape):
         if self.Wci is None:
-            self.Wci = Variable(torch.zeros(1, hidden, shape[0], shape[1]))#.cuda()
-            self.Wcf = Variable(torch.zeros(1, hidden, shape[0], shape[1]))#.cuda()
-            self.Wco = Variable(torch.zeros(1, hidden, shape[0], shape[1]))#.cuda()
+            self.Wci = Variable(torch.zeros(1, hidden, shape[0], shape[1])).cuda()
+            self.Wcf = Variable(torch.zeros(1, hidden, shape[0], shape[1])).cuda()
+            self.Wco = Variable(torch.zeros(1, hidden, shape[0], shape[1])).cuda()
         else:
             assert shape[0] == self.Wci.size()[2], 'Input Height Mismatched!'
             assert shape[1] == self.Wci.size()[3], 'Input Width Mismatched!'
-        return (Variable(torch.randn(batch_size, hidden, shape[0], shape[1])),
-                Variable(torch.randn(batch_size, hidden, shape[0], shape[1])))
+        return (Variable(torch.randn(batch_size, hidden, shape[0], shape[1])).cuda(),
+                Variable(torch.randn(batch_size, hidden, shape[0], shape[1])).cuda())
 
 
 class ConvLSTM(nn.Module):
@@ -135,13 +135,13 @@ class ConvLSTM(nn.Module):
 
 if __name__ == '__main__':
     # gradient check
-    convlstm = ConvLSTM(input_channels=512, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3)#.cuda()
+    convlstm = ConvLSTM(input_channels=512, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3).cuda()
     loss_fn = torch.nn.MSELoss()
 
-    input = Variable(torch.randn(1, 512, 64, 32))#.cuda()
-    target = Variable(torch.randn(1, 32, 64, 32))#.double().cuda()
+    input = Variable(torch.randn(1, 512, 64, 32)).cuda()
+    target = Variable(torch.randn(1, 32, 64, 32)).double().cuda()
 
     output = convlstm(input)
-    output = output[0][0]#.double()
+    output = output[0][0].double()
     res = torch.autograd.gradcheck(loss_fn, (output, target), eps=1e-6, raise_exception=True)
-    print(res)    
+    print(res)
