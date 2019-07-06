@@ -27,6 +27,7 @@ import iris
 import iris.plot as iplt
 import cartopy
 import cartopy.crs as ccrs
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
 class plots:
     @staticmethod
@@ -195,7 +196,7 @@ class plots:
     @staticmethod
     def geograph(latitude, longitude, field, p_value, label, ticks,
                  figname='./NorthPolar.png', gridtype='geographical',
-                 boundary='northhem', ttest=False):
+                 boundary='northhem', colormap= 'coolwarm', ttest=False):
         """
         This module will make a geographical plot to give a spatial view of fields.
         This module is built on iris and cartopy for the visualization of fields on
@@ -239,7 +240,7 @@ class plots:
                 verts = np.vstack([np.sin(theta), np.cos(theta)]).T
                 circle = mpath.Path(verts * radius + center)
                 ax.set_boundary(circle, transform=ax.transAxes)
-                cs = iplt.contourf(cube_iris, cmap='coolwarm',levels=ticks, extend='both') #, vmin=ticks[0], vmax=ticks[-1]
+                cs = iplt.contourf(cube_iris, cmap=colormap, levels=ticks, extend='both') #, vmin=ticks[0], vmax=ticks[-1]
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
                                     shrink =0.8, pad=0.05, format="%.1f")
                 cbar.set_label(label,size = 8)
@@ -265,7 +266,7 @@ class plots:
                 gl.yformatter = LATITUDE_FORMATTER
                 gl.xlabel_style = {'size': 11, 'color': 'gray'}
                 gl.ylabel_style = {'size': 11, 'color': 'gray'}
-                cs = iplt.contourf(cube_iris,cmap='coolwarm',levels=ticks, extend='both')
+                cs = iplt.contourf(cube_iris,cmap=colormap, levels=ticks, extend='both')
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
                                     shrink =0.8, pad=0.05, format="%.1f")
                 cbar.set_label(label,size = 11)
@@ -277,7 +278,33 @@ class plots:
                                s=0.1, c='g',alpha=0.3)
                 iplt.show()
                 fig.savefig(figname, dpi=300)
-                plt.close(fig)                
+                plt.close(fig)
+            elif boundary == 'Barents':
+                fig = plt.figure(figsize=(6,5.4))
+                ax = plt.axes(projection=ccrs.PlateCarree())
+                ax.set_extent([15,65,60,85],ccrs.PlateCarree()) # W:18 E:60 S:64 N:80
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                                  linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                gl.xlabels_top = False
+                gl.xformatter = LONGITUDE_FORMATTER
+                gl.yformatter = LATITUDE_FORMATTER
+                gl.xlabel_style = {'size': 11, 'color': 'gray'}
+                gl.ylabel_style = {'size': 11, 'color': 'gray'}
+                cs = iplt.contourf(cube_iris,cmap=colormap, levels=ticks, extend='both')
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05, format="%.1f")
+                cbar.set_label(label,size = 11)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 11)
+                if ttest == True:
+                    ii, jj = np.where(p_value<=0.05) # significance level 95%
+                    ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
+                               s=0.1, c='g',alpha=0.3)
+                iplt.show()
+                fig.savefig(figname, dpi=300)
+                plt.close(fig)
             else:
                 print ('This boundary is not supported by the module. Please check the documentation.')
         elif gridtype == 'curvilinear':
@@ -316,7 +343,7 @@ class plots:
                 verts = np.vstack([np.sin(theta), np.cos(theta)]).T
                 circle = mpath.Path(verts * radius + center)
                 ax.set_boundary(circle, transform=ax.transAxes)
-                cs = iplt.contourf(cube_regrid, cmap='coolwarm', vmin=ticks[0], vmax=ticks[-1]) #pcolormesh
+                cs = iplt.contourf(cube_regrid, cmap=colormap, vmin=ticks[0], vmax=ticks[-1]) #pcolormesh
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
                                     shrink =0.8, pad=0.05, format="%.1f")
                 cbar.set_label(label,size = 8)
@@ -342,7 +369,7 @@ class plots:
                 gl.yformatter = LATITUDE_FORMATTER
                 gl.xlabel_style = {'size': 11, 'color': 'gray'}
                 gl.ylabel_style = {'size': 11, 'color': 'gray'}
-                cs = iplt.contourf(cube_regrid, cmap='coolwarm', vmin=ticks[0], vmax=ticks[-1])
+                cs = iplt.contourf(cube_regrid, cmap=colormap, vmin=ticks[0], vmax=ticks[-1])
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
                                     shrink =0.8, pad=0.05, format="%.1f")
                 cbar.set_label(label,size = 8)
