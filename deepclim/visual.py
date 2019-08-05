@@ -120,7 +120,8 @@ class plots:
         plt.show()
         fig.savefig(figname,dpi=400)
         plt.close(fig)
-    
+        
+    @staticmethod
     def vertProfileOverlap(xaxis, yaxis, corr, cont, p_value, label,
                            ticks, contour_level, inline_space,
                            figname='./VerticalProfile', ttest=False):
@@ -231,7 +232,7 @@ class plots:
                 fig = plt.figure()
                 ax = plt.axes(projection=ccrs.NorthPolarStereo())
                 #ax.set_extent([-180,180,20,90],ccrs.PlateCarree())
-                ax.set_extent([-180,180,60,90],ccrs.PlateCarree())
+                ax.set_extent([-180,180,50,90],ccrs.PlateCarree())
                 ax.set_aspect('1')
                 ax.coastlines()
                 gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
@@ -240,9 +241,9 @@ class plots:
                 verts = np.vstack([np.sin(theta), np.cos(theta)]).T
                 circle = mpath.Path(verts * radius + center)
                 ax.set_boundary(circle, transform=ax.transAxes)
-                cs = iplt.contourf(cube_iris, cmap=colormap, levels=ticks, extend='both') #, vmin=ticks[0], vmax=ticks[-1]
+                cs = iplt.contourf(cube_iris, cmap=colormap,levels=ticks, extend='both') #, vmin=ticks[0], vmax=ticks[-1]
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
-                                    shrink =0.8, pad=0.05, format="%.1f")
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
                 cbar.set_label(label,size = 8)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
@@ -268,7 +269,7 @@ class plots:
                 gl.ylabel_style = {'size': 11, 'color': 'gray'}
                 cs = iplt.contourf(cube_iris,cmap=colormap, levels=ticks, extend='both')
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
-                                    shrink =0.8, pad=0.05, format="%.1f")
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
                 cbar.set_label(label,size = 11)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 11)
@@ -279,7 +280,7 @@ class plots:
                 iplt.show()
                 fig.savefig(figname, dpi=300)
                 plt.close(fig)
-            elif boundary == 'Barents':
+            elif boundary == 'Barents_PlateCarree':
                 fig = plt.figure(figsize=(6,5.4))
                 ax = plt.axes(projection=ccrs.PlateCarree())
                 ax.set_extent([15,65,60,85],ccrs.PlateCarree()) # W:18 E:60 S:64 N:80
@@ -294,7 +295,7 @@ class plots:
                 gl.ylabel_style = {'size': 11, 'color': 'gray'}
                 cs = iplt.contourf(cube_iris,cmap=colormap, levels=ticks, extend='both')
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
-                                    shrink =0.8, pad=0.05, format="%.1f")
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
                 cbar.set_label(label,size = 11)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 11)
@@ -305,6 +306,26 @@ class plots:
                 iplt.show()
                 fig.savefig(figname, dpi=300)
                 plt.close(fig)
+            elif boundary == 'Barents_Polar':
+                fig = plt.figure()
+                ax = plt.axes(projection=ccrs.EquidistantConic(central_longitude=39.0, central_latitude=72.0))
+                ax.set_extent([16,60,60,82],ccrs.PlateCarree()) # W:18 E:60 S:64 N:80
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                cs = iplt.contourf(cube_iris, cmap=colormap,levels=ticks, extend='both', vmin=ticks[0], vmax=ticks[-1])
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
+                cbar.set_label(label,size = 8)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 6)
+                if ttest == True:
+                    ii, jj = np.where(p_value<=0.05) # significance level 95%
+                    ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
+                               s=0.1, c='g',alpha=0.3)
+                iplt.show()
+                fig.savefig(figname, dpi=300)
+                plt.close(fig)            
             else:
                 print ('This boundary is not supported by the module. Please check the documentation.')
         elif gridtype == 'curvilinear':
@@ -345,7 +366,7 @@ class plots:
                 ax.set_boundary(circle, transform=ax.transAxes)
                 cs = iplt.contourf(cube_regrid, cmap=colormap, vmin=ticks[0], vmax=ticks[-1]) #pcolormesh
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
-                                    shrink =0.8, pad=0.05, format="%.1f")
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
                 cbar.set_label(label,size = 8)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
