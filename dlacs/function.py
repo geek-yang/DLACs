@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Functions used by the module
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.07.26
-Last Update     : 2020.02.20
+Last Update     : 2020.02.26
 Contributor     :
 Description     : This scripts provides the basic functions, which will be used by other modules.
 Return Values   : time series / array
@@ -37,9 +37,15 @@ def lossPeak(y_pred,y_train,y_max=0.8,y_min=0.3,weight_ex=2):
 
 def calculate_kl(log_alpha):
 	"""
-    Compute Kullback-Leibler divergence loss
+    Compute Kullback-Leibler divergence loss.
+    It includes variational posterior (euqation 18 in Shridhar et. al. 2019) and prior (euqation 20).
+    The prior contains no trainable parameters. So we use fixed normal distribution. As it is constant
+    in the cost function, we can simply omit it.
+    param log_alpha:
+    Note: torch.log1p is a more accurate alternative of torch.log, it has the expression as:
+          yi = log_{e} (xi + 1)
 	"""
-    return 0.5 * torch.sum(torch.log1p(torch.exp(-log_alpha)))
+    return 0.5 * torch.sum(torch.log1p(torch.exp(log_alpha)))
     
 
 def ELBO(nn.Module):
