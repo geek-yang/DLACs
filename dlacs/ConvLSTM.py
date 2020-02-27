@@ -25,6 +25,9 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
+# CUDA settings
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 class ConvLSTMCell(nn.Module):
     def __init__(self, input_channels, hidden_channels, kernel_size):
         """
