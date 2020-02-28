@@ -79,7 +79,7 @@ class BayesConvLSTMCell(nn.Module):
         self.Wxo_bias = Parameter(torch.Tensor(1, output_channels, 1, 1))
     else:
         self.register_parameter('bias', None)
-    # generate the template for convolutional layer - input x filter
+    # generate the convolutional layer for mean - input x filter
     # with bias
     self.Wxi_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
                                                                self.padding, self.dilation, self.groups)
@@ -109,7 +109,7 @@ class BayesConvLSTMCell(nn.Module):
     self.Wxo_log_alpha = Parameter(torch.Tensor(*alpha_shape))
     self.Who_log_alpha = Parameter(torch.Tensor(*alpha_shape))
 
-    # generate the template for convolutional layer - input x filter
+    # generate the convolutional layer for standard deviation - input x filter
     # without bias
     self.Wxi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
     												  self.padding, self.dilation, self.groups)
@@ -168,6 +168,7 @@ class BayesConvLSTMCell(nn.Module):
         self.Whc_log_alpha.data.fill_(5.0)
         self.Wxo_log_alpha.data.fill_(5.0)
         self.Who_log_alpha.data.fill_(5.0)
+        
 
     def forward(self, x, h, c):
     	"""
@@ -203,7 +204,7 @@ class BayesConvLSTMCell(nn.Module):
         # weight Wxf
         Wxf_mean = self.Wxf_mean_out(x, self.Wxf_mu, self.Wxf_bias)
         Wxf_sigma = torch.exp(self.Wxf_log_alpha) * self.Wxf_mu * self.Wxf_mu
-        Wxf_std = torch.sqrt(1e-16 + self.out_nobias(x * x, Wxf_sigma))
+        Wxf_std = torch.sqrt(1e-16 + self.Wxf_std_out(x * x, Wxf_sigma))
         Wxf_epsilon = Wxf_std.data.new(Wxf_std.size()).normal_()
         Wxf = Wxf_mean + Wxf_std * Wxf_epsilon
         
