@@ -71,10 +71,6 @@ class BayesConvLSTMCell(nn.Module):
     self.Wxo_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
     self.Who_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
 
-    self.Wci = None
-    self.Wcf = None
-    self.Wco = None    
-    
     # register bias matrix
     if bias:
         self.Wxi_bias = Parameter(torch.Tensor(1, output_channels, 1, 1))
@@ -84,12 +80,24 @@ class BayesConvLSTMCell(nn.Module):
     else:
         self.register_parameter('bias', None)
     # generate the template for convolutional layer - input x filter
-    
-    self.out_bias = lambda input, kernel, bias_x: F.conv2d(input, kernel, bias_x, self.stride,
-                                                           self.padding, self.dilation, self.groups)
-    self.out_nobias = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												 self.padding, self.dilation, self.groups)
-    
+    # with bias
+    self.Wxi_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
+                                                               self.padding, self.dilation, self.groups)
+    self.Wxf_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
+                                                               self.padding, self.dilation, self.groups)
+    self.Wxc_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
+                                                               self.padding, self.dilation, self.groups)
+    self.Wxo_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
+                                                               self.padding, self.dilation, self.groups)
+    # without bias
+    self.Whi_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												   self.padding, self.dilation, self.groups)
+    self.Whf_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												   self.padding, self.dilation, self.groups)
+    self.Whc_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												   self.padding, self.dilation, self.groups)
+    self.Who_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												 self.padding, self.dilation, self.groups)    
     # weight/filter/kernel for the variance factor (alpha) of each gate
     # in order to make sure that the variance is always positive, here we take log(alpha)
     self.Wxi_log_alpha = Parameter(torch.Tensor(*alpha_shape))
@@ -100,10 +108,30 @@ class BayesConvLSTMCell(nn.Module):
     self.Whc_log_alpha = Parameter(torch.Tensor(*alpha_shape))
     self.Wxo_log_alpha = Parameter(torch.Tensor(*alpha_shape))
     self.Who_log_alpha = Parameter(torch.Tensor(*alpha_shape))
+
+    # generate the template for convolutional layer - input x filter
+    # without bias
+    self.Wxi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)
+    self.Whi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)
+    self.Wxf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)
+    self.Whf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)
+    self.Wxc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)
+    self.Whc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)
+    self.Wxo_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)  
+    self.Who_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
+    												  self.padding, self.dilation, self.groups)
+    # cell state matrix has no convolutional operation, therefore it has no distribtuion
+    self.Wci = None
+    self.Wcf = None
+    self.Wco = None
     
-    self.Wci_log_alpha = None
-    self.Wcf_log_alpha = None
-    self.Wco_log_alpha = None     
     # initialize all the parameters
     self.reset_parameters()
 
@@ -155,25 +183,69 @@ class BayesConvLSTMCell(nn.Module):
     	"""
         # local parameterization trick
         # weight Wxi
-    	Wxi_mean = self.out_bias(x, self.Wxi_mu, self.Wxi_bias)
+    	Wxi_mean = self.Wxi_mean_out(x, self.Wxi_mu, self.Wxi_bias)
     	Wxi_sigma = torch.exp(self.Wxi_log_alpha) * self.Wxi_mu * self.Wxi_mu
-    	Wxi_std = torch.sqrt(1e-16 + self.out_nobias(x * x, Wxi_sigma))
-    	# Sample Gaussian distribution for training for not for prediction
-    	if self.training:
-    		# create a tensor of Gaussian noise, the same shape and data type as input tensor
-    		Wxi_epsilon = Wxi_std.data.new(Wxi_std.size()).normal_()
-    	else:
-    		Wxi_epsilon = 0.0
+    	Wxi_std = torch.sqrt(1e-16 + self.Wxi_std_out(x * x, Wxi_sigma))
+    	# Sample Gaussian distribution for both training and prediction
+    	# create a tensor of Gaussian noise, the same shape and data type as input tensor
+        # nn.Tensor.new() Constructs a new tensor of the same data type as self tensor.
+    	Wxi_epsilon = Wxi_std.data.new(Wxi_std.size()).normal_()
     	# put together the gaussian sampling result
     	Wxi = Wxi_mean + Wxi_std * Wxi_epsilon
         
         # weight Whi
-        Whi_mean = 
+        Whi_mean = self.Whi_mean_out(h, self.Whi_mu)
+        Whi_sigma = torch.exp(self.Whi_log_alpha) * self.Whi_mu * self.Whi_mu
+        Whi_std = torch.sqrt(1e-16 + self.Whi_std_out(h * h, Whi_sigma))
+        Whi_epsilon = Whi_std.data.new(Whi_std.size()).normal_()
+        Whi = Whi_mean + Whi_std * Whi_epsilon
         
-        ci = torch.sigmoid(Wxi + self.Whi(h) + c * self.Wci)
-        cf = torch.sigmoid(self.Wxf(x) + self.Whf(h) + c * self.Wcf)
-        cc = cf * c + ci * torch.tanh(self.Wxc(x) + self.Whc(h))
-        co = torch.sigmoid(self.Wxo(x) + self.Who(h) + cc * self.Wco)
+        # weight Wxf
+        Wxf_mean = self.Wxf_mean_out(x, self.Wxf_mu, self.Wxf_bias)
+        Wxf_sigma = torch.exp(self.Wxf_log_alpha) * self.Wxf_mu * self.Wxf_mu
+        Wxf_std = torch.sqrt(1e-16 + self.out_nobias(x * x, Wxf_sigma))
+        Wxf_epsilon = Wxf_std.data.new(Wxf_std.size()).normal_()
+        Wxf = Wxf_mean + Wxf_std * Wxf_epsilon
+        
+        # weight Whf
+        Whf_mean = self.Whf_mean_out(h, self.Whf_mu)
+        Whf_sigma = torch.exp(self.Whf_log_alpha) * self.Whf_mu * self.Whf_mu
+        Whf_std = torch.sqrt(1e-16 + self.Whf_std_out(h * h, Whi_sigma))
+        Whf_epsilon = Whf_std.data.new(Whf_std.size()).normal_()
+        Whf = Whf_mean + Whf_std * Whf_epsilon
+        
+        # weight Wxc
+        Wxc_mean = self.Wxc_mean_out(x, self.Wxc_mu, self.Wxc_bias)
+        Wxc_sigma = torch.exp(self.Wxc_log_alpha) * self.Wxc_mu * self.Wxc_mu
+        Wxc_std = torch.sqrt(1e-16 + self.Wxc_std_out(x * x, Wxc_sigma))
+        Wxc_epsilon = Wxc_std.data.new(Wxc_std.size()).normal_()
+        Wxc = Wxc_mean + Wxc_std * Wxc_epsilon
+
+        # weight Whc
+        Whc_mean = self.Whc_mean_out(h, self.Whc_mu)
+        Whc_sigma = torch.exp(self.Whc_log_alpha) * self.Whc_mu * self.Whc_mu
+        Whc_std = torch.sqrt(1e-16 + self.Whc_std_out(h * h, Whi_sigma))
+        Whc_epsilon = Whc_std.data.new(Whc_std.size()).normal_()
+        Whc = Whc_mean + Whc_std * Whc_epsilon
+
+        # weight Wxo
+        Wxo_mean = self.Wxo_mean_out(x, self.Wxo_mu, self.Wxo_bias)
+        Wxo_sigma = torch.exp(self.Wxo_log_alpha) * self.Wxo_mu * self.Wxo_mu
+        Wxo_std = torch.sqrt(1e-16 + self.Wxo_std_out(x * x, Wxo_sigma))
+        Wxo_epsilon = Wxc_std.data.new(Wxo_std.size()).normal_()
+        Wxo = Wxo_mean + Wxo_std * Wxo_epsilon
+
+        # weight Whc
+        Who_mean = self.Who_mean_out(h, self.Who_mu)
+        Who_sigma = torch.exp(self.Who_log_alpha) * self.Who_mu * self.Who_mu
+        Who_std = torch.sqrt(1e-16 + self.Who_std_out(h * h, Whi_sigma))
+        Who_epsilon = Who_std.data.new(Who_std.size()).normal_()
+        Who = Who_mean + Who_std * Who_epsilon
+        
+        ci = torch.sigmoid(Wxi + Whi + c * self.Wci)
+        cf = torch.sigmoid(Wxf + Whf + c * self.Wcf)
+        cc = cf * c + ci * torch.tanh(Wxc + Whc)
+        co = torch.sigmoid(Wxo + Who + cc * self.Wco)
         ch = co * torch.tanh(cc)
         return ch, cc
 
@@ -188,32 +260,13 @@ class BayesConvLSTMCell(nn.Module):
         return (Variable(torch.randn(batch_size, hidden, shape[0], shape[1])).to(device),
                 Variable(torch.randn(batch_size, hidden, shape[0], shape[1])).to(device))        
         
-        
-    def forward(self, x):
-
-    	# local parameterization trick
-    	mean = self.out_bias(x, self.mu)
-    	sigma = torch.exp(self.log_alpha) * self.mu * self.mu
-    	std = torch.sqrt(1e-16 + self.out_nobias(x * x, sigma))
-
-
-    	return out
-    
     def kl_loss(self):
+        """
+        It calls the function of Kullback-Leibler divergence to compute the entropy difference.
+        Since the prior distribution is prescribed as Gaussian and it contains no trainable
+        parameters, we will take it as a constant and simply omit it.
+        """
     	return self.weight.nelement() / self.log_alpha.nelement() * metrics.calculate_kl(self.log_alpha)
-
-class BayesConvLSTMCell(BayesConvCell):
-    def __init__(self, input_channels, hidden_channels, kernel_size):
-        """
-        Build convolutional cell for ConvLSTM.
-        param input_channels: number of channels (variables) from input fields
-        param hidden_channels: number of channels inside hidden layers, the dimension correponds to the output size
-        param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
-        """
-        super(BayesConvLSTMCell, self).__init__()
-
-    
-
 
 
 
