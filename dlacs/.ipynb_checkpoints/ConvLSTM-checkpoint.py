@@ -148,3 +148,4 @@ if __name__ == '__main__':
     output = output[0][0].double()
     res = torch.autograd.gradcheck(loss_fn, (output, target), eps=1e-6, raise_exception=True)
     print(res)
+		
