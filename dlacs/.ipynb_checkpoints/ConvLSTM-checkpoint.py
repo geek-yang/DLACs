@@ -138,11 +138,11 @@ class ConvLSTM(nn.Module):
 
 if __name__ == '__main__':
     # gradient check
-    convlstm = ConvLSTM(input_channels=512, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3).cuda()
+    convlstm = ConvLSTM(input_channels=512, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3).to(device)
     loss_fn = torch.nn.MSELoss()
 
-    input = Variable(torch.randn(1, 512, 64, 32)).cuda()
-    target = Variable(torch.randn(1, 32, 64, 32)).double().cuda()
+    input = Variable(torch.randn(1, 512, 64, 32)).to(device)
+    target = Variable(torch.randn(1, 32, 64, 32)).double().to(device)
 
     output = convlstm(input)
     output = output[0][0].double()

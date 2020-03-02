@@ -25,6 +25,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn import Parameter
+import dlacs.function
 
 # CUDA settings
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -33,7 +34,7 @@ class BayesConvLSTMCell(nn.Module):
     """
     Construction of Bayesian Convolutional LSTM Cell.
     """
-    def __init__(self, input_channels, output_channels, kernel_size=(1,1),
+    def __init__(self, input_channels, output_channels, kernel_size,
                  alpha_shape=(1,1), stride=1, padding=0, dilation=1, bias=True):
         """
         Build Bayesian Convolutional LSTM Cell with a distribution over each gate (weights)
@@ -89,18 +90,18 @@ class BayesConvLSTMCell(nn.Module):
         self.Wxf_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
                                                                    self.padding, self.dilation, self.groups)
         self.Wxc_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
-                                                               self.padding, self.dilation, self.groups)
+                                                                   self.padding, self.dilation, self.groups)
         self.Wxo_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
-                                                               self.padding, self.dilation, self.groups)
+                                                                   self.padding, self.dilation, self.groups)
         # without bias
         self.Whi_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												   self.padding, self.dilation, self.groups)
+    												       self.padding, self.dilation, self.groups)
         self.Whf_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												   self.padding, self.dilation, self.groups)
+    												       self.padding, self.dilation, self.groups)
         self.Whc_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												   self.padding, self.dilation, self.groups)
+    												       self.padding, self.dilation, self.groups)
         self.Who_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												 self.padding, self.dilation, self.groups)    
+    												       self.padding, self.dilation, self.groups)    
         # weight/filter/kernel for the variance factor (alpha) of each gate
         # in order to make sure that the variance is always positive, here we take log(alpha)
         self.Wxi_log_alpha = Parameter(torch.Tensor(*alpha_shape))
@@ -114,21 +115,21 @@ class BayesConvLSTMCell(nn.Module):
         # generate the convolutional layer for standard deviation - input x filter
         # without bias
         self.Wxi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)
+    												      self.padding, self.dilation, self.groups)
         self.Whi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)
+    												      self.padding, self.dilation, self.groups)
         self.Wxf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)
+    												      self.padding, self.dilation, self.groups)
         self.Whf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)
+    												      self.padding, self.dilation, self.groups)
         self.Wxc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)
+    												      self.padding, self.dilation, self.groups)
         self.Whc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)
+    												      self.padding, self.dilation, self.groups)
         self.Wxo_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)  
+    												      self.padding, self.dilation, self.groups)  
         self.Who_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												  self.padding, self.dilation, self.groups)
+    												      self.padding, self.dilation, self.groups)
         # cell state matrix has no convolutional operation, therefore it has no distribtuion
         self.Wci = None
         self.Wcf = None
@@ -253,7 +254,7 @@ class BayesConvLSTMCell(nn.Module):
 
     def init_hidden(self, batch_size, hidden, shape):
         """
-        Initialize the hidden layers in LSTM.
+        Initialize the hidden layers (cell state) in LSTM.
         """
         if self.Wci is None:
             self.Wci = Variable(torch.zeros(1, hidden, shape[0], shape[1])).to(device)
@@ -271,7 +272,7 @@ class BayesConvLSTMCell(nn.Module):
         Since the prior distribution is prescribed as Gaussian and it contains no trainable
         parameters, we will take it as a constant and simply omit it.
         """
-        return self.weight.nelement() / self.log_alpha.nelement() * metrics.calculate_kl(self.log_alpha)
+        return self.weight.nelement() / self.log_alpha.nelement() * function.calculate_kl(self.log_alpha)
     
 class BayesConvLSTM(nn.Module):
     """
@@ -302,9 +303,12 @@ class BayesConvLSTM(nn.Module):
 
     def forward(self, x, timestep):
         """
-        Forward module of ConvLSTM.
+        Forward module of ConvLSTM. The computation of KL-divergence in each layer is performed
+        and the results will be aggregated.
         param x: input data with dimensions [batch size, channel, height, width]
+        param timestep: only execute the initialization for the first timestep
         """
+        kl_loss = torch.zeros(1).to(device)
         if timestep == 0:
             self.internal_state = []
         # loop inside 
@@ -314,16 +318,21 @@ class BayesConvLSTM(nn.Module):
             if timestep == 0:
                 print('Initialization')
                 bsize, _, height, width = x.size()
+                # initialize hidden layers (cell state) matrix
                 (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
                                                          shape=(height, width))
-                self.internal_state.append((h, c))
-                    
+                self.internal_state.append((h, c))                
             # do forward
             (h, c) = self.internal_state[i]
             x, new_c = getattr(self, name)(x, h, c)
+            
             self.internal_state[i] = (x, new_c)
+            
+            # take KL divergence
+            kl_loss += getattr(self, name).kl_loss()
+            
             # only record output from last layer
             if i == (self.num_layers - 1):
                 outputs = x
 
-        return outputs, (x, new_c)
+        return outputs, kl_loss, (x, new_c)

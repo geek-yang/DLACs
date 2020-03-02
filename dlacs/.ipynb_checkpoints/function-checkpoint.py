@@ -43,6 +43,8 @@ def calculate_kl(log_alpha):
     Note: torch.log1p is a more accurate alternative of torch.log, it has the expression as:
     yi = log_{e} (xi + 1)
     """
+    # check https://github.com/JACKHAHA363/BBBRNN/blob/master/BBBLayers.py
+    kl = log_posterior - log_prior
     return 0.5 * torch.sum(torch.log1p(torch.exp(-log_alpha)))
 
 class ELBO(nn.Module):
@@ -60,4 +62,5 @@ class ELBO(nn.Module):
         loss is indeed the likelihood cost, and KL the complexity cost.
         """
         assert not target.requires_grad
-        return F.nll_loss(input, target, size_average=True) * self.train_size + kl_weight * kl
+        loss_function = nn.CrossEntropyLoss()
+        return loss_function(input, target, size_average=True) * self.train_size + kl_weight * kl
