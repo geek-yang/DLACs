@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Functions used by the module
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.07.26
-Last Update     : 2020.02.26
+Last Update     : 2020.03.03
 Contributor     :
 Description     : This scripts provides the basic functions, which will be used by other modules.
 Return Values   : time series / array
@@ -33,6 +33,18 @@ def lossPeak(y_pred,y_train,y_max=0.8,y_min=0.3,weight_ex=2):
     
     return error_peak
 
+def Gaussian(self, weight, mean=0, std):
+    """
+    Probability density function of Gaussian distribution.
+    Without giving the mean of the distribution, this function becomes the fixed Gaussian
+    with mean = 0.
+    Check https://github.com/felix-laumann/Bayesian_CNN_ContinualLearning/blob/master/utils/BBBdistributions.py
+    """
+    def logpdf(self, x):
+        c = - float(0.5 * math.log(2 * math.pi))
+        return c - 0.5 * self.logvar - (x - self.mu).pow(2) / (2 * math.exp(self.logvar))
+    
+
 def calculate_kl(log_alpha):
     """
     Compute Kullback-Leibler divergence loss.
@@ -45,6 +57,7 @@ def calculate_kl(log_alpha):
     """
     # check https://github.com/JACKHAHA363/BBBRNN/blob/master/BBBLayers.py
     kl = log_posterior - log_prior
+    
     return 0.5 * torch.sum(torch.log1p(torch.exp(-log_alpha)))
 
 class ELBO(nn.Module):

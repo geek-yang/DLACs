@@ -142,6 +142,9 @@ class BayesConvLSTMCell(nn.Module):
         """
         Initialise (learnable) approximate posterior parameters, including mean (mu) and 
         variance factor (log alpha).
+        Note: Here we follow the variational inference and take a Gaussian distribution
+              as N(mu,alpha x mu^2). Therefore alpha is smaller than 1 and log_alpha is
+              smaller than 0.
         """
         n = self.input_channels
         for k in self.kernel_size:
@@ -163,14 +166,14 @@ class BayesConvLSTMCell(nn.Module):
             self.Wxc_bias.data.uniform_(-stdv, stdv)
             self.Wxo_bias.data.uniform_(-stdv, stdv)
         # reset log alpha
-        self.Wxi_log_alpha.data.fill_(5.0)
-        self.Whi_log_alpha.data.fill_(5.0)
-        self.Wxf_log_alpha.data.fill_(5.0)
-        self.Whf_log_alpha.data.fill_(5.0)
-        self.Wxc_log_alpha.data.fill_(5.0)
-        self.Whc_log_alpha.data.fill_(5.0)
-        self.Wxo_log_alpha.data.fill_(5.0)
-        self.Who_log_alpha.data.fill_(5.0)
+        self.Wxi_log_alpha.data.fill_(-5.0)
+        self.Whi_log_alpha.data.fill_(-5.0)
+        self.Wxf_log_alpha.data.fill_(-5.0)
+        self.Whf_log_alpha.data.fill_(-5.0)
+        self.Wxc_log_alpha.data.fill_(-5.0)
+        self.Whc_log_alpha.data.fill_(-5.0)
+        self.Wxo_log_alpha.data.fill_(-5.0)
+        self.Who_log_alpha.data.fill_(-5.0)
         
     def forward(self, x, h, c):
         """
