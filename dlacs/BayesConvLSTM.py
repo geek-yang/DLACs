@@ -38,7 +38,7 @@ class BayesConvLSTMCell(nn.Module):
     """
     Construction of Bayesian Convolutional LSTM Cell.
     """
-    def __init__(self, input_channels, output_channels, kernel_size,
+    def __init__(self, input_channels, hidden_channels, kernel_size,
                  alpha_shape=(1,1), stride=1, padding=0, dilation=1, bias=True):
         """
         Build Bayesian Convolutional LSTM Cell with a distribution over each gate (weights)
@@ -60,7 +60,7 @@ class BayesConvLSTMCell(nn.Module):
         super(BayesConvLSTMCell, self).__init__()
         #assert hidden_channels % 2 == 0
         self.input_channels = input_channels
-        self.output_channels = output_channels
+        self.hidden_channels = hidden_channels
         self.kernel_size = (kernel_size, kernel_size)
         self.stride = stride
         self.padding = int((kernel_size - 1) / 2) # make sure the output size remains the same as input
@@ -70,21 +70,21 @@ class BayesConvLSTMCell(nn.Module):
         self.bias = bias
 
         # weight/filter/kernel for the mean (mu) of each gate
-        self.Wxi_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
-        self.Whi_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
-        self.Wxf_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
-        self.Whf_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
-        self.Wxc_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
-        self.Whc_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
-        self.Wxo_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
-        self.Who_mu = Parameter(torch.Tensor(output_channels, input_channels, *self.kernel_size))
+        self.Wxi_mu = Parameter(torch.Tensor(hidden_channels, input_channels, *self.kernel_size))
+        self.Whi_mu = Parameter(torch.Tensor(hidden_channels, hidden_channels, *self.kernel_size))
+        self.Wxf_mu = Parameter(torch.Tensor(hidden_channels, input_channels, *self.kernel_size))
+        self.Whf_mu = Parameter(torch.Tensor(hidden_channels, hidden_channels, *self.kernel_size))
+        self.Wxc_mu = Parameter(torch.Tensor(hidden_channels, input_channels, *self.kernel_size))
+        self.Whc_mu = Parameter(torch.Tensor(hidden_channels, hidden_channels, *self.kernel_size))
+        self.Wxo_mu = Parameter(torch.Tensor(hidden_channels, input_channels, *self.kernel_size))
+        self.Who_mu = Parameter(torch.Tensor(hidden_channels, hidden_channels, *self.kernel_size))
 
         # register bias matrix
         if self.bias:
-            self.Wxi_bias = Parameter(torch.Tensor(1, output_channels, 1, 1))
-            self.Wxf_bias = Parameter(torch.Tensor(1, output_channels, 1, 1))
-            self.Wxc_bias = Parameter(torch.Tensor(1, output_channels, 1, 1))
-            self.Wxo_bias = Parameter(torch.Tensor(1, output_channels, 1, 1))
+            self.Wxi_bias = Parameter(torch.Tensor(hidden_channels))
+            self.Wxf_bias = Parameter(torch.Tensor(hidden_channels))
+            self.Wxc_bias = Parameter(torch.Tensor(hidden_channels))
+            self.Wxo_bias = Parameter(torch.Tensor(hidden_channels))
         else:
             self.register_parameter('bias', None)
         # generate the convolutional layer for mean - input x filter
@@ -179,7 +179,7 @@ class BayesConvLSTMCell(nn.Module):
         self.Wxo_log_alpha.data.fill_(-5.0)
         self.Who_log_alpha.data.fill_(-5.0)
         
-    def forward(self, x, h, c):
+    def forward(self, x, h, c, training=True):
         """
         Forward process of BayesConvLSTM Layer. This process includes two steps:
         (1) Sampling of the variational inference distribution (Gaussian)
@@ -259,17 +259,20 @@ class BayesConvLSTMCell(nn.Module):
         ch = co * torch.tanh(cc)
 
         # compute Kullback-Leibler divergence
-        Wxi_kl_loss = self.kl_loss(Wxi, Wxi_mu, Wxi_var)
-        Whi_kl_loss = self.kl_loss(Whi, Whi_mu, Whi_var)
-        Wxf_kl_loss = self.kl_loss(Wxf, Wxf_mu, Wxf_var)
-        Whf_kl_loss = self.kl_loss(Whf, Whf_mu, Whf_var)
-        Wxc_kl_loss = self.kl_loss(Wxc, Wxc_mu, Wxc_var)
-        Whc_kl_loss = self.kl_loss(Whc, Whc_mu, Whc_var)
-        Wxo_kl_loss = self.kl_loss(Wxo, Wxo_mu, Wxo_var)
-        Who_kl_loss = self.kl_loss(Who, Who_mu, Who_var)
+        if training:
+            Wxi_kl_loss = self.kl_loss(Wxi, Wxi_mean, Wxi_std)
+            Whi_kl_loss = self.kl_loss(Whi, Whi_mean, Whi_std)
+            Wxf_kl_loss = self.kl_loss(Wxf, Wxf_mean, Wxf_std)
+            Whf_kl_loss = self.kl_loss(Whf, Whf_mean, Whf_std)
+            Wxc_kl_loss = self.kl_loss(Wxc, Wxc_mean, Wxc_std)
+            Whc_kl_loss = self.kl_loss(Whc, Whc_mean, Whc_std)
+            Wxo_kl_loss = self.kl_loss(Wxo, Wxo_mean, Wxo_std)
+            Who_kl_loss = self.kl_loss(Who, Who_mean, Who_std)
 
-        kl_loss_sum = Wxi_kl_loss + Whi_kl_loss + Wxf_kl_loss + Wxf_kl_loss +\
-                    Wxc_kl_loss + Whc_kl_loss + Wxo_kl_loss + Who_kl_loss
+            kl_loss_sum = Wxi_kl_loss + Whi_kl_loss + Wxf_kl_loss + Wxf_kl_loss +\
+                        Wxc_kl_loss + Whc_kl_loss + Wxo_kl_loss + Who_kl_loss
+        else:
+            kl_loss_sum = None
         
         return ch, cc, kl_loss_sum
 
@@ -327,13 +330,16 @@ class BayesConvLSTM(nn.Module):
             setattr(self, name, cell)
             self._all_layers.append(cell)        
 
-    def forward(self, x, timestep):
+    def forward(self, x, timestep, training=True):
         """
         Forward module of ConvLSTM. The computation of KL-divergence in each layer is performed
         and the results will be aggregated.
         param x: input data with dimensions [batch size, channel, height, width]
         param timestep: only execute the initialization for the first timestep
         """
+        # define the type of forward
+        self.training = training # training is boolean
+        # define the kl loss
         kl_loss = torch.zeros(1).to(device)
         if timestep == 0:
             self.internal_state = []
@@ -342,7 +348,7 @@ class BayesConvLSTM(nn.Module):
             # all cells are initialized in the first step
             name = 'cell{}'.format(i)
             if timestep == 0:
-                print('Initialization')
+                print('Initialization layer {}'.format(i))
                 bsize, _, height, width = x.size()
                 # initialize hidden layers (cell state) matrix
                 (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
@@ -350,7 +356,7 @@ class BayesConvLSTM(nn.Module):
                 self.internal_state.append((h, c))                
             # do forward
             (h, c) = self.internal_state[i]
-            x, new_c, kl_loss_layer = getattr(self, name)(x, h, c)
+            x, new_c, kl_loss_layer = getattr(self, name)(x, h, c, self.training)
             
             self.internal_state[i] = (x, new_c)
             

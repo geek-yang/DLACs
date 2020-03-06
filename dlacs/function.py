@@ -34,7 +34,7 @@ def lossPeak(y_pred,y_train,y_max=0.8,y_min=0.3,weight_ex=2):
     
     return error_peak
 
-def logpdf_Gaussian(weight, mu=0.0, var=0.05):
+def logpdf_Gaussian(weight, mu=0.0, std=0.25):
     """
     Entropy of probability density function of Gaussian distribution. This function will 
     be used to compute the entropy of Gaussian sampling by posterior and prior.
@@ -44,26 +44,29 @@ def logpdf_Gaussian(weight, mu=0.0, var=0.05):
     Note that 
     param weight: weight matrix after sampling the Gaussian distribution
     param mu: mean value of Gaussian distribution
-    param var: variance of Gaussian distribution
+    param std: standard deviation of Gaussian distribution
     """
-    entropy = - math.log(math.sqrt(var)) - math.log(math.sqrt(2*math.pi)) - (weight - mu)**2 / (2 * var)
+    if isinstance(std, float):
+        entropy = - math.log(std) - math.log(math.sqrt(2*math.pi)) - (weight - mu)**2 / (2 * std**2)
+    else:
+        entropy = - torch.log(std) - math.log(math.sqrt(2*math.pi)) - (weight - mu)**2 / (2 * std**2)
 
     return entropy
 
 class ELBO(nn.Module):
-    def __init__(self, train_size):
+    def __init__(self, train_size, loss_function=nn.KLDivLoss()):
         """
         Quantify the Evidence Lower Bound (ELBO) and provide the total loss.
         """
-        super(Bayes_loss, self).__init__()
+        super(ELBO, self).__init__()
         self.train_size = train_size
+        self.loss_function = loss_function
         
     def forward(self, input, target, kl, kl_weight=1.0):
         """
-        Negative log likelihood loss + Kullback-Leibler divergence. This comes from
-        the euqation (4) in Shridhar et. al. 2019, where the negative log likelihood
-        loss is indeed the likelihood cost, and KL the complexity cost.
+        Kullback-Leibler divergence. This comes from
+        the euqation (4) in Shridhar et. al. 2019, where the first term is
+        indeed the likelihood cost, and the second term is the complexity cost.
         """
         assert not target.requires_grad
-        loss_function = nn.CrossEntropyLoss()
-        return loss_function(input, target, size_average=True) * self.train_size + kl_weight * kl
+        return self.loss_function(input, target) * self.train_size + kl_weight * kl
