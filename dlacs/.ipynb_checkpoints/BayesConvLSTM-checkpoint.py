@@ -13,6 +13,10 @@ Description     : This module provides several methods to perform Bayesian deep 
                   This method is devised based on the reference, namely the Bayes by Backprop:
                   Blundell, C., Cornebise, J., Kavukcuoglu, K., & Wierstra, D. (2015). Weight uncertainty in
                   neural networks. arXiv preprint arXiv:1505.05424.
+                  Shridhar, K., Laumann, F. and Liwicki, M., 2019. A comprehensive guide to bayesian
+                  convolutional neural network with variational inference. arXiv preprint arXiv:1901.02731.
+                  Fortunato, M., Blundell, C. and Vinyals, O., 2017. Bayesian recurrent neural networks.
+                  arXiv preprint arXiv:1704.02798.
 Return Values   : time series / array
 Caveat!         : This module get input as a spatial-temporal sequence and make a prediction for only one step!!
 				  The so-called many to one prediction.
@@ -190,8 +194,8 @@ class BayesConvLSTMCell(nn.Module):
         # local parameterization trick
         # weight Wxi
         Wxi_mean = self.Wxi_mean_out(x, self.Wxi_mu, self.Wxi_bias)
-        Wxi_sigma = torch.exp(self.Wxi_log_alpha) * self.Wxi_mu * self.Wxi_mu
-        Wxi_std = torch.sqrt(1e-16 + self.Wxi_std_out(x * x, Wxi_sigma))
+        Wxi_var = torch.exp(self.Wxi_log_alpha) * self.Wxi_mu * self.Wxi_mu
+        Wxi_std = torch.sqrt(1e-16 + self.Wxi_std_out(x * x, Wxi_var))
         # Sample Gaussian distribution for both training and prediction
         # create a tensor of Gaussian noise, the same shape and data type as input tensor
         # nn.Tensor.new() Constructs a new tensor of the same data type as self tensor.
@@ -201,50 +205,50 @@ class BayesConvLSTMCell(nn.Module):
 
         # weight Whi
         Whi_mean = self.Whi_mean_out(h, self.Whi_mu)
-        Whi_sigma = torch.exp(self.Whi_log_alpha) * self.Whi_mu * self.Whi_mu
-        Whi_std = torch.sqrt(1e-16 + self.Whi_std_out(h * h, Whi_sigma))
+        Whi_var = torch.exp(self.Whi_log_alpha) * self.Whi_mu * self.Whi_mu
+        Whi_std = torch.sqrt(1e-16 + self.Whi_std_out(h * h, Whi_var))
         Whi_epsilon = Whi_std.data.new(Whi_std.size()).normal_()
         Whi = Whi_mean + Whi_std * Whi_epsilon
         
         # weight Wxf
         Wxf_mean = self.Wxf_mean_out(x, self.Wxf_mu, self.Wxf_bias)
-        Wxf_sigma = torch.exp(self.Wxf_log_alpha) * self.Wxf_mu * self.Wxf_mu
-        Wxf_std = torch.sqrt(1e-16 + self.Wxf_std_out(x * x, Wxf_sigma))
+        Wxf_var = torch.exp(self.Wxf_log_alpha) * self.Wxf_mu * self.Wxf_mu
+        Wxf_std = torch.sqrt(1e-16 + self.Wxf_std_out(x * x, Wxf_var))
         Wxf_epsilon = Wxf_std.data.new(Wxf_std.size()).normal_()
         Wxf = Wxf_mean + Wxf_std * Wxf_epsilon
         
         # weight Whf
         Whf_mean = self.Whf_mean_out(h, self.Whf_mu)
-        Whf_sigma = torch.exp(self.Whf_log_alpha) * self.Whf_mu * self.Whf_mu
-        Whf_std = torch.sqrt(1e-16 + self.Whf_std_out(h * h, Whi_sigma))
+        Whf_var = torch.exp(self.Whf_log_alpha) * self.Whf_mu * self.Whf_mu
+        Whf_std = torch.sqrt(1e-16 + self.Whf_std_out(h * h, Whi_var))
         Whf_epsilon = Whf_std.data.new(Whf_std.size()).normal_()
         Whf = Whf_mean + Whf_std * Whf_epsilon
         
         # weight Wxc
         Wxc_mean = self.Wxc_mean_out(x, self.Wxc_mu, self.Wxc_bias)
-        Wxc_sigma = torch.exp(self.Wxc_log_alpha) * self.Wxc_mu * self.Wxc_mu
-        Wxc_std = torch.sqrt(1e-16 + self.Wxc_std_out(x * x, Wxc_sigma))
+        Wxc_var = torch.exp(self.Wxc_log_alpha) * self.Wxc_mu * self.Wxc_mu
+        Wxc_std = torch.sqrt(1e-16 + self.Wxc_std_out(x * x, Wxc_var))
         Wxc_epsilon = Wxc_std.data.new(Wxc_std.size()).normal_()
         Wxc = Wxc_mean + Wxc_std * Wxc_epsilon
 
         # weight Whc
         Whc_mean = self.Whc_mean_out(h, self.Whc_mu)
-        Whc_sigma = torch.exp(self.Whc_log_alpha) * self.Whc_mu * self.Whc_mu
-        Whc_std = torch.sqrt(1e-16 + self.Whc_std_out(h * h, Whi_sigma))
+        Whc_var = torch.exp(self.Whc_log_alpha) * self.Whc_mu * self.Whc_mu
+        Whc_std = torch.sqrt(1e-16 + self.Whc_std_out(h * h, Whi_var))
         Whc_epsilon = Whc_std.data.new(Whc_std.size()).normal_()
         Whc = Whc_mean + Whc_std * Whc_epsilon
 
         # weight Wxo
         Wxo_mean = self.Wxo_mean_out(x, self.Wxo_mu, self.Wxo_bias)
-        Wxo_sigma = torch.exp(self.Wxo_log_alpha) * self.Wxo_mu * self.Wxo_mu
-        Wxo_std = torch.sqrt(1e-16 + self.Wxo_std_out(x * x, Wxo_sigma))
+        Wxo_var = torch.exp(self.Wxo_log_alpha) * self.Wxo_mu * self.Wxo_mu
+        Wxo_std = torch.sqrt(1e-16 + self.Wxo_std_out(x * x, Wxo_var))
         Wxo_epsilon = Wxc_std.data.new(Wxo_std.size()).normal_()
         Wxo = Wxo_mean + Wxo_std * Wxo_epsilon
 
         # weight Whc
         Who_mean = self.Who_mean_out(h, self.Who_mu)
-        Who_sigma = torch.exp(self.Who_log_alpha) * self.Who_mu * self.Who_mu
-        Who_std = torch.sqrt(1e-16 + self.Who_std_out(h * h, Whi_sigma))
+        Who_var = torch.exp(self.Who_log_alpha) * self.Who_mu * self.Who_mu
+        Who_std = torch.sqrt(1e-16 + self.Who_std_out(h * h, Whi_var))
         Who_epsilon = Who_std.data.new(Who_std.size()).normal_()
         Who = Who_mean + Who_std * Who_epsilon
         
@@ -253,7 +257,21 @@ class BayesConvLSTMCell(nn.Module):
         cc = cf * c + ci * torch.tanh(Wxc + Whc)
         co = torch.sigmoid(Wxo + Who + cc * self.Wco)
         ch = co * torch.tanh(cc)
-        return ch, cc
+
+        # compute Kullback-Leibler divergence
+        Wxi_kl_loss = self.kl_loss(Wxi, Wxi_mu, Wxi_var)
+        Whi_kl_loss = self.kl_loss(Whi, Whi_mu, Whi_var)
+        Wxf_kl_loss = self.kl_loss(Wxf, Wxf_mu, Wxf_var)
+        Whf_kl_loss = self.kl_loss(Whf, Whf_mu, Whf_var)
+        Wxc_kl_loss = self.kl_loss(Wxc, Wxc_mu, Wxc_var)
+        Whc_kl_loss = self.kl_loss(Whc, Whc_mu, Whc_var)
+        Wxo_kl_loss = self.kl_loss(Wxo, Wxo_mu, Wxo_var)
+        Who_kl_loss = self.kl_loss(Who, Who_mu, Who_var)
+
+        kl_loss_sum = Wxi_kl_loss + Whi_kl_loss + Wxf_kl_loss + Wxf_kl_loss +\
+                    Wxc_kl_loss + Whc_kl_loss + Wxo_kl_loss + Who_kl_loss
+        
+        return ch, cc, kl_loss_sum
 
     def init_hidden(self, batch_size, hidden, shape):
         """
@@ -269,13 +287,18 @@ class BayesConvLSTMCell(nn.Module):
         return (Variable(torch.randn(batch_size, hidden, shape[0], shape[1])).to(device),
                 Variable(torch.randn(batch_size, hidden, shape[0], shape[1])).to(device))        
         
-    def kl_loss(self):
+    def kl_loss(self, weight, mu, var):
         """
-        It calls the function of Kullback-Leibler divergence to compute the entropy difference.
-        Since the prior distribution is prescribed as Gaussian and it contains no trainable
-        parameters, we will take it as a constant and simply omit it.
+        This module takes Kullback-Leibler divergence to compute the entropy difference.
+        It includes variational posterior (Gaussian distribution) and prior (fixed Gaussian). 
+        The prior contains no trainable parameters. So we use fixed normal distribution.
+        param weight: weight matrix after sampling the Gaussian
+        param mu: mean of the variational inference distribution
+        param var: variance of the variational inference distribution
         """
-        return self.weight.nelement() / self.log_alpha.nelement() * function.calculate_kl(self.log_alpha)
+        posterior_entropy = torch.sum(dlacs.function.logpdf_Gaussian(weight, mu, var))
+        prior_entropy = torch.sum(dlacs.function.logpdf_Gaussian(weight))
+        return posterior_entropy - prior_entropy
     
 class BayesConvLSTM(nn.Module):
     """
@@ -327,12 +350,12 @@ class BayesConvLSTM(nn.Module):
                 self.internal_state.append((h, c))                
             # do forward
             (h, c) = self.internal_state[i]
-            x, new_c = getattr(self, name)(x, h, c)
+            x, new_c, kl_loss_layer = getattr(self, name)(x, h, c)
             
             self.internal_state[i] = (x, new_c)
             
             # take KL divergence
-            kl_loss += getattr(self, name).kl_loss()
+            kl_loss += kl_loss_layer
             
             # only record output from last layer
             if i == (self.num_layers - 1):

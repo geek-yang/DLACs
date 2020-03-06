@@ -4,13 +4,14 @@ Copyright Netherlands eScience Center
 Function        : Functions used by the module
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.07.26
-Last Update     : 2020.03.03
+Last Update     : 2020.03.06
 Contributor     :
 Description     : This scripts provides the basic functions, which will be used by other modules.
 Return Values   : time series / array
 Caveat!         :
 """
 
+import math
 import numpy as np
 import os
 import torch
@@ -33,32 +34,21 @@ def lossPeak(y_pred,y_train,y_max=0.8,y_min=0.3,weight_ex=2):
     
     return error_peak
 
-def Gaussian(self, weight, mean=0, std):
+def logpdf_Gaussian(weight, mu=0.0, var=0.05):
     """
-    Probability density function of Gaussian distribution.
-    Without giving the mean of the distribution, this function becomes the fixed Gaussian
-    with mean = 0.
-    Check https://github.com/felix-laumann/Bayesian_CNN_ContinualLearning/blob/master/utils/BBBdistributions.py
+    Entropy of probability density function of Gaussian distribution. This function will 
+    be used to compute the entropy of Gaussian sampling by posterior and prior.
+    log(f(x)) = log(1/(sigma sqrt(2pi) * e^(-1/2 * ((x-mu)/sigma)^2))
+    For posterior, mean and log_std are trainable variables. While for prior, mean and log_var
+    are constants (fixed Gaussian distribution).
+    Note that 
+    param weight: weight matrix after sampling the Gaussian distribution
+    param mu: mean value of Gaussian distribution
+    param var: variance of Gaussian distribution
     """
-    def logpdf(self, x):
-        c = - float(0.5 * math.log(2 * math.pi))
-        return c - 0.5 * self.logvar - (x - self.mu).pow(2) / (2 * math.exp(self.logvar))
-    
+    entropy = - math.log(math.sqrt(var)) - math.log(math.sqrt(2*math.pi)) - (weight - mu)**2 / (2 * var)
 
-def calculate_kl(log_alpha):
-    """
-    Compute Kullback-Leibler divergence loss.
-    It includes variational posterior (euqation 18 in Shridhar et. al. 2019) and prior (euqation 20).
-    The prior contains no trainable parameters. So we use fixed normal distribution. As it is constant
-    in the cost function, we can simply omit it.
-    param log_alpha:
-    Note: torch.log1p is a more accurate alternative of torch.log, it has the expression as:
-    yi = log_{e} (xi + 1)
-    """
-    # check https://github.com/JACKHAHA363/BBBRNN/blob/master/BBBLayers.py
-    kl = log_posterior - log_prior
-    
-    return 0.5 * torch.sum(torch.log1p(torch.exp(-log_alpha)))
+    return entropy
 
 class ELBO(nn.Module):
     def __init__(self, train_size):
