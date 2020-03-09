@@ -20,6 +20,8 @@ It is given by paper J.Walsh et. al., 2019. Benchmark seasonal prediction skill 
 import sys
 import warnings
 import numbers
+import logging
+import time as tttt
 
 # for data loading
 import os
@@ -62,20 +64,26 @@ constant = {'g' : 9.80616,      # gravititional acceleration [m / s2]
             'rho' : 1026,       # sea water density [kg/m3]
             }
 
-
-# ** Reanalysis **
-# **ERA-Interim** 1979 - 2016 (ECMWF)
-# **ORAS4**       1958 - 2014 (ECMWF)
+# calculate the time for the code execution
+start_time = tttt.time()
 
 ################################################################################# 
 #########                           datapath                             ########
 #################################################################################
+# ** Reanalysis **
+# **ERA-Interim** 1979 - 2016 (ECMWF)
+# **ORAS4**       1958 - 2014 (ECMWF)
 # please specify data path
 datapath = '/projects/0/blueactn/dataBayes'
 output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
 ################################################################################# 
-#########                           datapath                             ########
+#########                             main                               ########
 #################################################################################
+# set up logging files
+logging.basicConfig(filename = os.path.join(self.out_path,'logFile.log'),
+                    filemode = 'w+', level = logging.DEBUG,
+                    format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 
 if __name__=="__main__":
     print ('*********************** get the key to the datasets *************************')
