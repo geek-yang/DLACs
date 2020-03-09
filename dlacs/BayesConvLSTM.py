@@ -170,14 +170,14 @@ class BayesConvLSTMCell(nn.Module):
             self.Wxc_bias.data.uniform_(-stdv, stdv)
             self.Wxo_bias.data.uniform_(-stdv, stdv)
         # reset log alpha
-        self.Wxi_log_alpha.data.fill_(-5.0)
-        self.Whi_log_alpha.data.fill_(-5.0)
-        self.Wxf_log_alpha.data.fill_(-5.0)
-        self.Whf_log_alpha.data.fill_(-5.0)
-        self.Wxc_log_alpha.data.fill_(-5.0)
-        self.Whc_log_alpha.data.fill_(-5.0)
-        self.Wxo_log_alpha.data.fill_(-5.0)
-        self.Who_log_alpha.data.fill_(-5.0)
+        self.Wxi_log_alpha.data.fill_(-3.0)
+        self.Whi_log_alpha.data.fill_(-3.0)
+        self.Wxf_log_alpha.data.fill_(-3.0)
+        self.Whf_log_alpha.data.fill_(-3.0)
+        self.Wxc_log_alpha.data.fill_(-3.0)
+        self.Whc_log_alpha.data.fill_(-3.0)
+        self.Wxo_log_alpha.data.fill_(-3.0)
+        self.Who_log_alpha.data.fill_(-3.0)
         
     def forward(self, x, h, c, training=True):
         """
@@ -195,7 +195,7 @@ class BayesConvLSTMCell(nn.Module):
         # weight Wxi
         Wxi_mean = self.Wxi_mean_out(x, self.Wxi_mu, self.Wxi_bias)
         Wxi_var = torch.exp(self.Wxi_log_alpha) * self.Wxi_mu * self.Wxi_mu
-        Wxi_std = torch.sqrt(1e-16 + self.Wxi_std_out(x * x, Wxi_var))
+        Wxi_std = torch.sqrt(1e-10 + self.Wxi_std_out(x * x, Wxi_var))
         # Sample Gaussian distribution for both training and prediction
         # create a tensor of Gaussian noise, the same shape and data type as input tensor
         # nn.Tensor.new() Constructs a new tensor of the same data type as self tensor.
@@ -348,7 +348,7 @@ class BayesConvLSTM(nn.Module):
             # all cells are initialized in the first step
             name = 'cell{}'.format(i)
             if timestep == 0:
-                print('Initialization layer {}'.format(i))
+                #print('Initialization layer {}'.format(i))
                 bsize, _, height, width = x.size()
                 # initialize hidden layers (cell state) matrix
                 (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
@@ -361,7 +361,7 @@ class BayesConvLSTM(nn.Module):
             self.internal_state[i] = (x, new_c)
             
             # take KL divergence
-            kl_loss += kl_loss_layer
+            kl_loss += (kl_loss_layer / self.hidden_channels[i]) # scale kl loss w.r.t. hidden channels
             
             # only record output from last layer
             if i == (self.num_layers - 1):

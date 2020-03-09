@@ -50,11 +50,11 @@ def logpdf_Gaussian(weight, mu=0.0, std=0.25):
         entropy = - math.log(std) - math.log(math.sqrt(2*math.pi)) - (weight - mu)**2 / (2 * std**2)
     else:
         entropy = - torch.log(std) - math.log(math.sqrt(2*math.pi)) - (weight - mu)**2 / (2 * std**2)
-
+    
     return entropy
 
 class ELBO(nn.Module):
-    def __init__(self, train_size, loss_function=nn.KLDivLoss()):
+    def __init__(self, train_size, loss_function=nn.MSELoss()):
         """
         Quantify the Evidence Lower Bound (ELBO) and provide the total loss.
         """
