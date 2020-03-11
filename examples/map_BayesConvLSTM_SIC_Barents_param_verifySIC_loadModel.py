@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale
+Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Load and reuse model
 Author       : Yang Liu
 First Built  : 2020.03.09
-Last Update  : 2020.03.09
+Last Update  : 2020.03.11
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
-Description     : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem. We use Pytorch as the deep learning framework.
+Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
+               Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
+               We use Pytorch as the deep learning framework.
 
 Here we predict sea ice concentration with one extra relevant field from either ocean or atmosphere to test the predictor.
 
 Return Values   : pkl model and figures
 
-The regionalization adopted here follows that of the MASIE (Multisensor Analyzed Sea Ice Extent) product available from the National Snow and Ice Data Center:
+The regionalization adopted here follows that of the MASIE (Multisensor Analyzed Sea Ice Extent) product available
+from the National Snow and Ice Data Center:
 https://nsidc.org/data/masie/browse_regions
 It is given by paper J.Walsh et. al., 2019. Benchmark seasonal prediction skill estimates based on regional indices.
 """
@@ -80,7 +83,7 @@ output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
 #########                             main                               ########
 #################################################################################
 # set up logging files
-logging.basicConfig(filename = os.path.join(self.out_path,'logFile.log'),
+logging.basicConfig(filename = os.path.join(output_path,'logFile.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -181,7 +184,7 @@ if __name__=="__main__":
 #     NINO = dataset_index.variables['NINO'][348:-1]
 #     AMO = dataset_index.variables['AMO'][348:-1]
 #     PDO = dataset_index.variables['PDO'][348:-1]
-
+    logging.info("Loading datasets and extracting variables successfully!")
     #################################################################################
     ###########                 global land-sea mask                      ###########
     #################################################################################
@@ -338,6 +341,7 @@ if __name__=="__main__":
 #                              0,0,0])
     #weight_loss = np.repeat(weight_month,4)
     #weight_loss = np.tile(weight_loss,len(year))
+    logging.info("Data preprocessing complete!")
     print ('*******************  parameter for check  *********************')
     choice_exp_norm = ohc_exp_norm
     print ('*******************  create basic dimensions for tensor and network  *********************')
@@ -375,7 +379,7 @@ if __name__=="__main__":
     print ('*******************  load exsited LSTM model  *********************')
     # load model parameters
     model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
-    model.load_state_dict(torch.load(os.path.join(output_path, 'Barents','bayesconvlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl')))
+    model.load_state_dict(torch.load(os.path.join(output_path,'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_500_validSIC.pkl'), map_location=device))
     # load entire model
     #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_z850_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
@@ -386,93 +390,3 @@ if __name__=="__main__":
     print(model)
     # check the sequence length (dimension in need for post-processing)
     sequence_len, height, width = sic_exp_norm.shape
-    ##################################################################################
-    ##################################################################################
-    ##################################################################################
-    print ('*******************  run BayesConvLSTM  *********************')
-    print ('The model is designed to make many to one prediction.')
-    print ('A series of multi-chanel variables will be input to the model.')
-    print ('The model learns by verifying the output at each timestep.')
-    # check the sequence length
-    sequence_len, height, width = sic_exp_norm.shape
-    # initialize our model
-    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
-    # use Evidence Lower Bound (ELBO) to quantify the loss
-    ELBO = dlacs.function.ELBO(height*width)
-    # for classification, target must be integers (label)
-    #ELBO = dlacs.function.ELBO(height*width,loss_function=torch.nn.KLDivLoss())
-    #ELBO = dlacs.function.ELBO(height*width,loss_function=nn.CrossEntropyLoss(reduction='mean'))
-    #ELBO = dlacs.function.ELBO(height*width,loss_function=nn.NLLLoss(reduction='mean'))
-    # penalty for kl
-    penalty_kl = sequence_len
-    # stochastic gradient descent
-    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
-    # Adam optimizer
-    optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    print(model)
-    print(ELBO)
-    print(optimiser)
-    print('##############################################################')
-    print('##################  start training loop  #####################')
-    print('##############################################################')
-    # track training loss
-    hist = np.zeros(num_epochs)
-    # loop of epoch
-    for t in range(num_epochs):
-        # Clear stored gradient
-        model.zero_grad()
-        # loop of timestep
-        for timestep in range(sequence_len - cross_valid_year*12*4 - test_year*12*4):
-            # hidden state re-initialized inside the model when timestep=0
-            #################################################################################
-            ########          create input tensor with multi-input dimension         ########
-            #################################################################################
-            # create variables
-            x_input = np.stack((sic_exp_norm[timestep,:,:],
-                                choice_exp_norm[timestep,:,:],
-                                month_exp[timestep,:,:])) #vstack,hstack,dstack
-            x_var = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width)).to(device)
-            #################################################################################
-            ########       create training tensor with multi-input dimension         ########
-            #################################################################################
-            y_train_stack = sic_exp_norm[timestep+1,:,:] #vstack,hstack,dstack
-            y_var = torch.autograd.Variable(torch.Tensor(y_train_stack).view(-1,hidden_channels[-1],height,width)).to(device)
-            #################################################################################   
-            # Forward pass
-            y_pred, kl_loss, _ = model(x_var, timestep)
-            # choose training data
-            y_target = y_var
-            # torch.nn.functional.mse_loss(y_pred, y_train) can work with (scalar,vector) & (vector,vector)
-            # Please Make Sure y_pred & y_train have the same dimension
-            # accumulate loss
-            if timestep == 0:
-                loss = ELBO(y_pred, y_target, kl_loss, 1 / (len(hidden_channels) * 8 * penalty_kl))
-            else:
-                loss += ELBO(y_pred, y_target, kl_loss, 1 / (len(hidden_channels) * 8 * penalty_kl))
-            #print (timestep)
-        #print(y_pred.shape)
-        #print(y_train.shape)
-        # print loss at certain iteration
-        if t % 5 == 0:
-            print("Epoch ", t, "MSE: ", loss.item())
-            #print(y_pred)
-            # gradient check
-            # Gradcheck requires double precision numbers to run
-            #res = torch.autograd.gradcheck(loss_fn, (y_pred.double(), y_train.double()), eps=1e-6, raise_exception=True)
-            #print(res)
-        hist[t] = loss.item()
-
-        # Zero out gradient, else they will accumulate between epochs
-        optimiser.zero_grad()
-    
-        # Backward pass
-        loss.backward()
-
-        # Update parameters
-        optimiser.step()
-        
-    # save the model
-    # (recommended) save the model parameters only
-    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm.pkl'))
-    # save the entire model
-    # torch.save(model, os.path.join(output_path,'bayesconvlstm.pkl'))

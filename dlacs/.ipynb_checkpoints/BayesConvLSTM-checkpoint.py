@@ -361,7 +361,8 @@ class BayesConvLSTM(nn.Module):
             self.internal_state[i] = (x, new_c)
             
             # take KL divergence
-            kl_loss += (kl_loss_layer / self.hidden_channels[i]) # scale kl loss w.r.t. hidden channels
+            if training:
+                kl_loss += (kl_loss_layer / self.hidden_channels[i]) # scale kl loss w.r.t. hidden channels
             
             # only record output from last layer
             if i == (self.num_layers - 1):

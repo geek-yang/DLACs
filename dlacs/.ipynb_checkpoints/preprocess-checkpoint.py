@@ -19,7 +19,7 @@ import cartopy
 import os
 import iris
 #import matplotlib
-import seaborn as sns
+#import seaborn as sns
 #import matplotlib.pyplot as plt
 
 class operator:

@@ -83,7 +83,7 @@ class plots:
         #invert the y axis
         plt.gca().invert_yaxis()
         plt.show()
-        fig.savefig(figname,dpi=400)
+        fig.savefig(figname,dpi=200)
         plt.close(fig)
         
     @staticmethod
@@ -118,7 +118,7 @@ class plots:
         #invert the y axis
         plt.gca().invert_yaxis()
         plt.show()
-        fig.savefig(figname,dpi=400)
+        fig.savefig(figname,dpi=200)
         plt.close(fig)
         
     @staticmethod
@@ -155,7 +155,7 @@ class plots:
         #invert the y axis
         plt.gca().invert_yaxis()
         plt.show()
-        fig.savefig(figname,dpi=400)
+        fig.savefig(figname,dpi=200)
         plt.close(fig)
         
     @staticmethod    
@@ -191,13 +191,13 @@ class plots:
         #lead_year = ['-15','-12','-9','-6','-3','0','3','6','9','12','15']
         plt.ylabel("Latitude")
         plt.show()
-        fig.savefig(figname,dpi=400)
+        fig.savefig(figname,dpi=200)
         plt.close(fig)
     
     @staticmethod
-    def geograph(latitude, longitude, field, p_value, label, ticks,
+    def geograph(latitude, longitude, field, label, ticks,
                  figname='./NorthPolar.png', gridtype='geographical',
-                 boundary='northhem', colormap= 'coolwarm', ttest=False):
+                 boundary='northhem', colormap= 'coolwarm'):
         """
         This module will make a geographical plot to give a spatial view of fields.
         This module is built on iris and cartopy for the visualization of fields on
@@ -247,10 +247,6 @@ class plots:
                 cbar.set_label(label,size = 8)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
-                if ttest == True:
-                    ii, jj = np.where(p_value<=0.05) # significance level 95%
-                    ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
-                               s=0.1, c='g',alpha=0.3)
                 iplt.show()
                 fig.savefig(figname, dpi=300)
                 plt.close(fig)
@@ -273,10 +269,6 @@ class plots:
                 cbar.set_label(label,size = 11)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 11)
-                if ttest == True:
-                    ii, jj = np.where(p_value<=0.05) # significance level 95%
-                    ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
-                               s=0.1, c='g',alpha=0.3)
                 iplt.show()
                 fig.savefig(figname, dpi=300)
                 plt.close(fig)
@@ -299,10 +291,6 @@ class plots:
                 cbar.set_label(label,size = 11)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 11)
-                if ttest == True:
-                    ii, jj = np.where(p_value<=0.05) # significance level 95%
-                    ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
-                               s=0.1, c='g',alpha=0.3)
                 iplt.show()
                 fig.savefig(figname, dpi=300)
                 plt.close(fig)
@@ -370,9 +358,6 @@ class plots:
                 cbar.set_label(label,size = 8)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
-                ii, jj = np.where(p_value<=0.005)
-                #ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
-                #           s=0.1, c='g',alpha=0.3)
                 iplt.show()
                 fig.savefig(figname, dpi=300)
                 plt.close(fig)
@@ -396,9 +381,6 @@ class plots:
                 cbar.set_label(label,size = 8)
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
-                ii, jj = np.where(p_value<=0.005)
-                #ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
-                #           s=0.1, c='g',alpha=0.3)
                 iplt.show()
                 fig.savefig(figname, dpi=300)
                 plt.close(fig)                
