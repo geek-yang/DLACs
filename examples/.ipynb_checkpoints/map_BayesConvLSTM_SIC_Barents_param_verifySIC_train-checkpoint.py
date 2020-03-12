@@ -426,7 +426,7 @@ if __name__=="__main__":
         # print loss at certain iteration
         if t % 5 == 0:
             print("Epoch ", t, "MSE: ", loss.item())
-            logging.info("Epoch ", t, "MSE: ", loss.item())
+            logging.info("Epoch {} MSE: {}".format(t,loss.item()))
             #print(y_pred)
             # gradient check
             # Gradcheck requires double precision numbers to run
