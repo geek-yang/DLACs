@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Train model
 Author       : Yang Liu
 First Built  : 2020.03.09
-Last Update  : 2020.03.11
+Last Update  : 2020.03.12
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -47,6 +47,8 @@ import dlacs.function
 # for visualization
 import dlacs.visual
 import matplotlib
+# Generate images without having a window appear
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import iris # also helps with regriding
@@ -277,7 +279,6 @@ if __name__=="__main__":
     print ('******************  choose the fields from target region  *******************')
     # select land-sea mask
     sea_ice_mask_barents = sea_ice_mask_global[12:36,264:320]
-    print ('******************  choose the fields from target region  *******************')
     # select the area between greenland and ice land for instance 60-70 N / 44-18 W
     sic_exp = SIC_ERAI_area_series[:,12:36,264:320]
 #     t2m_exp = T2M_ERAI_series[:,12:36,264:320]
@@ -288,21 +289,6 @@ if __name__=="__main__":
 #     v10m_exp = V10M_ERAI_series[:,12:36,264:320]
 #     sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
     ohc_exp = OHC_300_ORAS4_weekly_series[:,12:36,264:320]
-    print(sic_exp.shape)
-#     print(t2m_exp.shape)
-#     print(slp_exp.shape)
-#     print(z500_exp.shape)
-#     print(u10m_exp.shape)
-#     print(v10m_exp.shape)
-#     print(sflux_exp.shape)
-    print(ohc_exp.shape)
-    print(latitude_ERAI[12:36])
-    print(longitude_ERAI[264:320])
-    print(latitude_ORAS4[12:36])
-    print(longitude_ORAS4[264:320])
-    #print(latitude_ERAI[26:40])
-    #print(longitude_ERAI[180:216])
-    #print(sic_exp[:])
     print ('*******************  pre-processing  *********************')
     print ('=========================   normalize data   ===========================')
     sic_exp_norm = dlacs.preprocess.operator.normalize(sic_exp)
@@ -317,8 +303,6 @@ if __name__=="__main__":
     print('================  save the normalizing factor  =================')
     sic_max = np.amax(sic_exp)
     sic_min = np.amin(sic_exp)
-    print(sic_max,"km2")
-    print(sic_min,"km2")
     print ('====================    A series of time (index)    ====================')
     _, yy, xx = sic_exp_norm.shape # get the lat lon dimension
     year = np.arange(1979,2017,1)
@@ -466,3 +450,9 @@ if __name__=="__main__":
     # torch.save(model, os.path.join(output_path,'bayesconvlstm.pkl'))
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
     logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))
+    
+    print ("*******************  Loss with time  **********************")
+    fig00 = plt.figure()
+    plt.plot(hist, label="Training loss")
+    plt.legend()
+    fig00.savefig(os.path.join(output_path,'SIC_ERAI_LSTM_pred_error.png'),dpi=200)

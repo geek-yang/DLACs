@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Save Output Files into NetCDF files
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2020.03.11
-Last Update     : 2018.03.11
+Last Update     : 2020.03.11
 Contributor     :
 Description     : This module aims to save the output fields into the netCDF files.
                   It outputs netCDF 4 files. The data has been compressed.

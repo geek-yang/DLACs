@@ -47,6 +47,8 @@ import dlacs.function
 # for visualization
 import dlacs.visual
 import matplotlib
+# Generate images without having a window appear
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import iris # also helps with regriding
@@ -79,6 +81,7 @@ start_time = tttt.time()
 # please specify data path
 datapath = '/projects/0/blueactn/dataBayes'
 output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
+model_name = 'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_500_validSIC.pkl'
 ################################################################################# 
 #########                             main                               ########
 #################################################################################
@@ -86,7 +89,6 @@ output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
 logging.basicConfig(filename = os.path.join(output_path,'logFile.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
 
 if __name__=="__main__":
     print ('*********************** get the key to the datasets *************************')
@@ -278,7 +280,6 @@ if __name__=="__main__":
     print ('******************  choose the fields from target region  *******************')
     # select land-sea mask
     sea_ice_mask_barents = sea_ice_mask_global[12:36,264:320]
-    print ('******************  choose the fields from target region  *******************')
     # select the area between greenland and ice land for instance 60-70 N / 44-18 W
     sic_exp = SIC_ERAI_area_series[:,12:36,264:320]
 #     t2m_exp = T2M_ERAI_series[:,12:36,264:320]
@@ -289,19 +290,6 @@ if __name__=="__main__":
 #     v10m_exp = V10M_ERAI_series[:,12:36,264:320]
 #     sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
     ohc_exp = OHC_300_ORAS4_weekly_series[:,12:36,264:320]
-    print(sic_exp.shape)
-#     print(t2m_exp.shape)
-#     print(slp_exp.shape)
-#     print(z500_exp.shape)
-#     print(u10m_exp.shape)
-#     print(v10m_exp.shape)
-#     print(sflux_exp.shape)
-    print(ohc_exp.shape)
-    print(latitude_ERAI[12:36])
-    print(longitude_ERAI[264:320])
-    print(latitude_ORAS4[12:36])
-    print(longitude_ORAS4[264:320])
-    #print(latitude_ERAI[26:40])
     #print(longitude_ERAI[180:216])
     #print(sic_exp[:])
     print ('*******************  pre-processing  *********************')
@@ -318,8 +306,6 @@ if __name__=="__main__":
     print('================  save the normalizing factor  =================')
     sic_max = np.amax(sic_exp)
     sic_min = np.amin(sic_exp)
-    print(sic_max,"km2")
-    print(sic_min,"km2")
     print ('====================    A series of time (index)    ====================')
     _, yy, xx = sic_exp_norm.shape # get the lat lon dimension
     year = np.arange(1979,2017,1)
@@ -379,7 +365,7 @@ if __name__=="__main__":
     print ('*******************  load exsited LSTM model  *********************')
     # load model parameters
     model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
-    model.load_state_dict(torch.load(os.path.join(output_path,'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_500_validSIC.pkl'), map_location=device))
+    model.load_state_dict(torch.load(os.path.join(output_path,model_name), map_location=device))
     # load entire model
     #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_z850_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
@@ -390,3 +376,76 @@ if __name__=="__main__":
     print(model)
     # check the sequence length (dimension in need for post-processing)
     sequence_len, height, width = sic_exp_norm.shape
+    #################################################################################
+    ########  operational lead time dependent prediction with testing data   ########
+    #################################################################################
+    print('##############################################################')
+    print('###################  start prediction loop ###################')
+    print('##############################################################')
+    # the model learn from time series and try to predict the next time step based on the previous time series
+    print ('*******************************  one step ahead forecast  *********************************')
+    print ('************  the last {} years of total time series are treated as test data  ************'.format(test_year))
+    # time series before test data
+    pred_base_sic = sic_exp_norm[:-test_year*12*4,:,:]
+    # predict x steps ahead
+    step_lead = 16 # unit week
+    # ensemble to generate
+    ensemble = 10
+    # create a matrix for the prediction
+    lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+    # start the prediction loop
+    for ens in range(ensemble):
+        print('ensemble No. {}'.format(ens))
+        saveNC4 = dlacs.saveNetCDF.savenc(output_path, 'pred_sic_ens_{}.nc'.format(ens))
+        for step in range(test_year*12*4):
+            # Clear stored gradient
+            model.zero_grad()
+            # Don't do this if you want your LSTM to be stateful
+            # Otherwise the hidden state should be cleaned up at each time step for prediction (we don't clear hidden state in our forward function)
+            # see example from (https://github.com/pytorch/examples/blob/master/time_sequence_prediction/train.py)
+            # model.hidden = model.init_hidden()
+            # based on the design of this module, the hidden states and cell states are initialized when the module is called.
+            for i in np.arange(1,sequence_len-test_year*12*4 + step + step_lead,1): # here i is actually the time step (index) of prediction, we use var[:i] to predict var[i]
+                #############################################################################
+                ###############           before time of prediction           ###############
+                #############################################################################
+                if i <= (sequence_len-test_year*12*4 + step):
+                    # create variables
+                    x_input = np.stack((sic_exp_norm[i-1,:,:],
+                                        choice_exp_norm[i-1,:,:],
+                                        month_exp[i-1,:,:])) #vstack,hstack,dstack
+                    x_var_pred = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width),
+                                                         requires_grad=False).to(device)
+                    # make prediction
+                    last_pred, _, _ = model(x_var_pred, i-1, training=False)
+                    # record the real prediction after the time of prediction
+                    if i == (sequence_len-test_year*12*4 + step):
+                        lead = 0
+                        # GPU data should be transferred to CPU
+                        lead_pred_sic[step,0,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
+                #############################################################################
+                ###############            after time of prediction           ###############
+                #############################################################################
+                else:
+                    lead += 1
+                    # prepare predictor
+                    if i <= sequence_len:
+                        # use the predicted data to make new prediction
+                        x_input = np.stack((lead_pred_sic[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                            choice_exp_norm[i-1,:,:],
+                                            month_exp[i-1,:,:])) #vstack,hstack,dstack
+                    else: # choice_exp_norm out of range, use the last value
+                        x_input = np.stack((lead_pred_sic[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                            choice_exp_norm[-1,:,:],
+                                            month_exp[i-1,:,:])) #vstack,hstack,dstack                    
+                    x_var_pred = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width),
+                                                         requires_grad=False).to(device)       
+                    # make prediction
+                    last_pred, _, _ = model(x_var_pred, i-1, training=False)
+                    # record the prediction
+                    lead_pred_sic[step,lead,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
+        saveNC.ncfile(lead_pred_sic)
+    print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
+    logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))
+    
+    

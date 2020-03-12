@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Bayesian Convolutional LSTM for one step prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2020.02.18
-Last Update     : 2020.03.31
+Last Update     : 2020.03.11
 Description     : This module provides several methods to perform Bayesian deep learning
                   on climate data. It is designed for weather/climate prediction with 
                   spatial-temporal sequence data. The main method here is the
