@@ -88,6 +88,7 @@ output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
 logging.basicConfig(filename = os.path.join(output_path,'logFile_train.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.getLogger('matplotlib.font_manager').disabled = True
 
 if __name__=="__main__":
     print ('*********************** get the key to the datasets *************************')
@@ -454,5 +455,7 @@ if __name__=="__main__":
     print ("*******************  Loss with time  **********************")
     fig00 = plt.figure()
     plt.plot(hist, label="Training loss")
+    plt.xlabel('Epoch')
+    plt.ylabel('Error')
     plt.legend()
     fig00.savefig(os.path.join(output_path,'SIC_ERAI_LSTM_pred_error.png'),dpi=200)
