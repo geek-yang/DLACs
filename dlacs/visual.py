@@ -206,7 +206,6 @@ class plots:
         param lat: latitude coordinate for plot
         param lon: longitude coordinate for plot
         param field: input field for visualization
-        param p_value: the significance level from t test. The significance level is set to be 99.5%.
         param gridtype: type of input spatial fields, it has two options
         - geographical (default) the coordinate is geographical, normally applied to atmosphere reanalysis
         - curvilinear the coordinate is curvilinear, normally applied to ocean reanalysis
@@ -248,7 +247,7 @@ class plots:
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
                 iplt.show()
-                fig.savefig(figname, dpi=300)
+                fig.savefig(figname, dpi=200)
                 plt.close(fig)
             elif boundary == 'atlantic':
                 fig = plt.figure(figsize=(8,5.4))
@@ -270,7 +269,7 @@ class plots:
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 11)
                 iplt.show()
-                fig.savefig(figname, dpi=300)
+                fig.savefig(figname, dpi=200)
                 plt.close(fig)
             elif boundary == 'Barents_PlateCarree':
                 fig = plt.figure(figsize=(6,5.4))
@@ -292,7 +291,7 @@ class plots:
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 11)
                 iplt.show()
-                fig.savefig(figname, dpi=300)
+                fig.savefig(figname, dpi=200)
                 plt.close(fig)
             elif boundary == 'Barents_Polar':
                 fig = plt.figure()
@@ -304,15 +303,11 @@ class plots:
                 cs = iplt.contourf(cube_iris, cmap=colormap,levels=ticks, extend='both', vmin=ticks[0], vmax=ticks[-1])
                 cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
                                     shrink =0.8, pad=0.05)#, format="%.1f")
-                cbar.set_label(label,size = 8)
+                cbar.set_label(label,size = 9)
                 cbar.set_ticks(ticks)
-                cbar.ax.tick_params(labelsize = 6)
-                if ttest == True:
-                    ii, jj = np.where(p_value<=0.05) # significance level 95%
-                    ax.scatter(longitude[jj], latitude[ii], transform=ccrs.Geodetic(),
-                               s=0.1, c='g',alpha=0.3)
+                cbar.ax.tick_params(labelsize = 8)
                 iplt.show()
-                fig.savefig(figname, dpi=300)
+                fig.savefig(figname, dpi=200)
                 plt.close(fig)            
             else:
                 print ('This boundary is not supported by the module. Please check the documentation.')
@@ -359,7 +354,7 @@ class plots:
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
                 iplt.show()
-                fig.savefig(figname, dpi=300)
+                fig.savefig(figname, dpi=200)
                 plt.close(fig)
             elif boundary == 'atlantic':
                 fig = plt.figure(figsize=(8,5.4))
@@ -382,10 +377,238 @@ class plots:
                 cbar.set_ticks(ticks)
                 cbar.ax.tick_params(labelsize = 6)
                 iplt.show()
-                fig.savefig(figname, dpi=300)
+                fig.savefig(figname, dpi=200)
                 plt.close(fig)                
             else:
                 print ('This boundary is not supported by the module. Please check the documentation.')                
         else:
             raise IOError("This module only support fields on geographical or curvilinear grid!")
             
+    @staticmethod
+    def geograph_mode(latitude_x, longitude_x, field_x,
+                      latitude_y, longitude_y, field_y, label, ticks, level,
+                      figname='./NorthPolar.png', gridtype='geographical',
+                      boundary='northhem', colormap= 'coolwarm'):
+        """
+        This module is designed for PCA/SVD/MCA analysis to illustrate two
+        fields at the same time.
+        This module is built on iris and cartopy for the visualization of fields on
+        both geographical and curvilinear grid.
+        
+        param latitude_x: latitude coordinate for input field x
+        param longitude_x: longitude coordinate for input field x
+        param field_x: input field for visualization with shades
+        param latitude_y: latitude coordinate for input field y
+        param longitude_y: longitude coordinate for input field y
+        param field_y: input field for visualization with contours
+        param label: label of shades
+        param ticks: ticks of shades
+        param level: level of contour lines
+        param gridtype: type of input spatial fields, it has two options
+        - geographical (default) the coordinate is geographical, normally applied to atmosphere reanalysis
+        - curvilinear the coordinate is curvilinear, normally applied to ocean reanalysis
+        param figname: name and output path of figure
+        param boundary: region for plot. It determines the boundary of plot area (lat,lon) and projection.
+        - northhem (default) plot the north hemisphere from 20N-90N & 180W-180E, with the projection NorthPolarStereo.
+        - atlantic plot the north Atlantic from 20N-90N & 90W-40E, with the projection PlateCarree
+        return: figures
+        rtype: png
+        """
+        print ("Create a NorthPolarStereo view of input fields.")
+        if gridtype == 'geographical':
+            print ("The input fields are originally on geographical grid")
+            # mode variable x
+            # first construct iris coordinate
+            lat_iris_x = iris.coords.DimCoord(latitude_x, standard_name='latitude', long_name='latitude',
+                                              var_name='lat', units='degrees')
+            lon_iris_x = iris.coords.DimCoord(longitude_x, standard_name='longitude', long_name='longitude',
+                                              var_name='lon', units='degrees')
+            # assembly the cube
+            cube_iris_x = iris.cube.Cube(field_x, long_name='geographical field', var_name='field', 
+                                         units='1', dim_coords_and_dims=[(lat_iris_x, 0), (lon_iris_x, 1)])
+            # mode variable y
+            lat_iris_y = iris.coords.DimCoord(latitude_y, standard_name='latitude', long_name='latitude',
+                                              var_name='lat', units='degrees')
+            lon_iris_y = iris.coords.DimCoord(longitude_y, standard_name='longitude', long_name='longitude',
+                                              var_name='lon', units='degrees')            
+            cube_iris_y = iris.cube.Cube(field_y, long_name='geographical field', var_name='field', 
+                                         units='1', dim_coords_and_dims=[(lat_iris_y, 0), (lon_iris_y, 1)])
+            if boundary == 'northhem':
+                fig = plt.figure()
+                ax = plt.axes(projection=ccrs.NorthPolarStereo())
+                #ax.set_extent([-180,180,20,90],ccrs.PlateCarree())
+                ax.set_extent([-180,180,50,90],ccrs.PlateCarree())
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                theta = np.linspace(0, 2*np.pi, 100)
+                center, radius = [0.5, 0.5], 0.5
+                verts = np.vstack([np.sin(theta), np.cos(theta)]).T
+                circle = mpath.Path(verts * radius + center)
+                ax.set_boundary(circle, transform=ax.transAxes)
+                cs = iplt.contourf(cube_iris_x, cmap=colormap,levels=ticks, extend='both') #, vmin=ticks[0], vmax=ticks[-1]
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
+                cbar.set_label(label,size = 8)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 6)
+                contour = iplt.contour(cube_iris_y, colors='dimgrey', levels = level,  linewidths = 0.8, format="%.2f")
+                plt.clabel(contour, inline=True, fontsize = 8, fmt ="%.2f")
+                iplt.show()
+                fig.savefig(figname, dpi=200)
+                plt.close(fig)
+            elif boundary == 'atlantic':
+                fig = plt.figure(figsize=(8,5.4))
+                ax = plt.axes(projection=ccrs.PlateCarree())
+                ax.set_extent([-90,40,20,85],ccrs.PlateCarree())
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                                  linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                gl.xlabels_top = False
+                gl.xformatter = LONGITUDE_FORMATTER
+                gl.yformatter = LATITUDE_FORMATTER
+                gl.xlabel_style = {'size': 11, 'color': 'gray'}
+                gl.ylabel_style = {'size': 11, 'color': 'gray'}
+                cs = iplt.contourf(cube_iris_x,cmap=colormap, levels=ticks, extend='both')
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
+                cbar.set_label(label,size = 11)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 11)
+                contour = iplt.contour(cube_iris_y, colors='dimgrey', levels = level,  linewidths = 0.8, format="%.2f")
+                plt.clabel(contour, inline=True, fontsize = 8, fmt ="%.2f")
+                iplt.show()
+                fig.savefig(figname, dpi=200)
+                plt.close(fig)
+            elif boundary == 'barents_plateCarree':
+                fig = plt.figure(figsize=(6,5.4))
+                ax = plt.axes(projection=ccrs.PlateCarree())
+                ax.set_extent([15,65,60,85],ccrs.PlateCarree()) # W:18 E:60 S:64 N:80
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                                  linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                gl.xlabels_top = False
+                gl.xformatter = LONGITUDE_FORMATTER
+                gl.yformatter = LATITUDE_FORMATTER
+                gl.xlabel_style = {'size': 11, 'color': 'gray'}
+                gl.ylabel_style = {'size': 11, 'color': 'gray'}
+                cs = iplt.contourf(cube_iris_x,cmap=colormap, levels=ticks, extend='both')
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
+                cbar.set_label(label,size = 11)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 11)
+                contour = iplt.contour(cube_iris_y, colors='dimgrey', levels = level,  linewidths = 0.8, format="%.2f")
+                plt.clabel(contour, inline=True, fontsize = 8, fmt ="%.2f")
+                iplt.show()
+                fig.savefig(figname, dpi=200)
+                plt.close(fig)
+            elif boundary == 'barents_polar':
+                fig = plt.figure()
+                ax = plt.axes(projection=ccrs.EquidistantConic(central_longitude=39.0, central_latitude=72.0))
+                ax.set_extent([16,60,60,82],ccrs.PlateCarree()) # W:18 E:60 S:64 N:80
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                cs = iplt.contourf(cube_iris_x, cmap=colormap,levels=ticks, extend='both', vmin=ticks[0], vmax=ticks[-1])
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
+                cbar.set_label(label,size = 9)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 8)
+                contour = iplt.contour(cube_iris_y, colors='dimgrey', levels = level,  linewidths = 0.8)
+                plt.clabel(contour, inline=True, fontsize = 8, fmt ="%.2f")
+                iplt.show()
+                fig.savefig(figname, dpi=200)
+                plt.close(fig)            
+            else:
+                print ('This boundary is not supported by the module. Please check the documentation.')
+        elif gridtype == 'curvilinear':
+            print ("The input fields are originally on curvilinear grid")
+            # mode variable x
+            # first construct iris coordinate
+            lat_iris_x = iris.coords.AuxCoord(latitude_x, standard_name='latitude', long_name='latitude',
+                                            var_name='lat', units='degrees')
+            lon_iris_x = iris.coords.AuxCoord(longitude_x, standard_name='longitude', long_name='longitude',
+                                            var_name='lon', units='degrees')
+            # assembly the cube
+            cube_iris_x = iris.cube.Cube(field_x, long_name='curvilinear field', var_name='field', 
+                                         units='1', aux_coords_and_dims=[(lat_iris_x, (0,1)), (lon_iris_x, (0,1))])
+            coord_sys = iris.coord_systems.GeogCS(iris.fileformats.pp.EARTH_RADIUS)
+            cube_iris_x.coord('latitude').coord_system = coord_sys
+            cube_iris_x.coord('longitude').coord_system = coord_sys
+            # mode variable y
+            lat_iris_y = iris.coords.AuxCoord(latitude_y, standard_name='latitude', long_name='latitude',
+                                              var_name='lat', units='degrees')
+            lon_iris_y = iris.coords.AuxCoord(longitude_y, standard_name='longitude', long_name='longitude',
+                                              var_name='lon', units='degrees')
+            cube_iris_y = iris.cube.Cube(field_y, long_name='curvilinear field', var_name='field', 
+                                         units='1', aux_coords_and_dims=[(lat_iris_y, (0,1)), (lon_iris_y, (0,1))])
+            cube_iris_y.coord('latitude').coord_system = coord_sys
+            cube_iris_y.coord('longitude').coord_system = coord_sys
+            # determine nx and ny for interpolation
+            jj, ii = latitude.shape
+            if ii > 1000:
+                nx = 1440
+                ny = 350
+            else:
+                nx = 720
+                ny = 140
+            cube_regrid_x, extent = iris.analysis.cartography.project(cube_iris_x, ccrs.PlateCarree(), nx, ny)
+            cube_regrid_y, extent = iris.analysis.cartography.project(cube_iris_y, ccrs.PlateCarree(), nx, ny)
+            # make plots
+            if boundary == 'northhem':
+                fig = plt.figure()
+                ax = plt.axes(projection=ccrs.NorthPolarStereo())
+                ax.set_extent([-180,180,20,90],ccrs.PlateCarree())
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                #gl.ylocator = mticker.FixedLocator([50,60,70,80,90])
+                theta = np.linspace(0, 2*np.pi, 100)
+                center, radius = [0.5, 0.5], 0.5
+                verts = np.vstack([np.sin(theta), np.cos(theta)]).T
+                circle = mpath.Path(verts * radius + center)
+                ax.set_boundary(circle, transform=ax.transAxes)
+                cs = iplt.contourf(cube_regrid_x, cmap=colormap, vmin=ticks[0], vmax=ticks[-1]) #pcolormesh
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05)#, format="%.1f")
+                cbar.set_label(label,size = 8)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 6)
+                contour = iplt.contour(cube_regrid_y, colors='dimgrey', levels = level,  linewidths = 0.8)
+                plt.clabel(contour, inline=True, fontsize = 8, fmt ="%.2f")
+                iplt.show()
+                fig.savefig(figname, dpi=200)
+                plt.close(fig)
+            elif boundary == 'atlantic':
+                fig = plt.figure(figsize=(8,5.4))
+                ax = plt.axes(projection=ccrs.PlateCarree())
+                ax.set_extent([-90,40,20,85],ccrs.PlateCarree())
+                ax.set_aspect('1')
+                ax.coastlines()
+                gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                                  linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                #gl.ylocator = mticker.FixedLocator([50,60,70,80,90])
+                gl.xlabels_top = False
+                gl.xformatter = LONGITUDE_FORMATTER
+                gl.yformatter = LATITUDE_FORMATTER
+                gl.xlabel_style = {'size': 11, 'color': 'gray'}
+                gl.ylabel_style = {'size': 11, 'color': 'gray'}
+                cs = iplt.contourf(cube_regrid_x, cmap=colormap, vmin=ticks[0], vmax=ticks[-1])
+                cbar = fig.colorbar(cs,extend='both', orientation='horizontal',
+                                    shrink =0.8, pad=0.05, format="%.1f")
+                cbar.set_label(label,size = 8)
+                cbar.set_ticks(ticks)
+                cbar.ax.tick_params(labelsize = 6)
+                contour = iplt.contour(cube_regrid_y, colors='dimgrey', levels = level,  linewidths = 0.8)
+                plt.clabel(contour, inline=True, fontsize = 8, fmt ="%.2f")
+                iplt.show()
+                fig.savefig(figname, dpi=200)
+                plt.close(fig)                
+            else:
+                print ('This boundary is not supported by the module. Please check the documentation.')                
+        else:
+            raise IOError("This module only support fields on geographical or curvilinear grid!")

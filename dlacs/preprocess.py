@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Statistical Operator for Climate Data
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2018.07.26
-Last Update     : 2019.04.17
+Last Update     : 2020.03.17
 Contributor     :
 Description     : This module provides several methods to perform statistical
                   analysis on MET and all kinds of fields.
@@ -521,25 +521,95 @@ class operator:
             
     
     @staticmethod
-    def mca(matrix_x, matrix_y):
+    def mca(matrix_a, matrix_b, dimension = 'spatial'):
         """
         Perform Maximum Covariance Analysis (MCA) with given data.
         The MCA is based on Singular Value Decomposition (SVD).
         return: eigenvalues and eigenvectors from Singular Value Decomposition.
-        rtype: numpy.array        
+        rtype: numpy.array
+        param matrix_a: first array for SVD
+        param matrix_b: second array for SVD
+        param dimension: decide which dimension (EOF) to keep, 2 options available:
+                         "spatial" / "temporal"
         """
         print ("The input matrix should only have 3 dimensions including time as the first axis.")
-        if matrix_x.ndim == 3 and matrix_y.ndim == 3:
-            nt_x, nx_x, ny_x = matrix_x.shape
-            nt_y, nx_y, ny_y = matrix_y.shape
+        if matrix_a.ndim == 3 and matrix_b.ndim == 3:
+            nt_a, ny_a, nx_a = matrix_a.shape
+            nt_b, ny_b, nx_b = matrix_b.shape
         else:
             print ("The dimensions of input arrays do not satisfy the requirement!")
         # reshape the input arrays
-        matrix_x_2D = np.reshape(matrix_x,[nt_x, ny_x*nx_x], order='F')
-        matrix_y_2D = np.reshape(matrix_y,[nt_y, ny_y*nx_y], order='F')
-        # calculate the covariance matrix
-        # time should be the 1st axis!
-        covariance_x_y = np.dot(matrix_x_2D.T, matrix_y_2D) / (nt_x-1)
-        # apply the SVD
-        U, sigma, V = np.linalg.svd(covariance_x_y, full_matrices=False,
-                                    compute_uv = True)
+        matrix_a_2D = np.reshape(matrix_a,[nt_a, ny_a*nx_a], order='F')
+        matrix_b_2D = np.reshape(matrix_b,[nt_b, ny_b*nx_b], order='F')
+        # choose which dimension to keep
+        if dimension == "spatial":
+            # calculate the covariance matrix
+            # time should be the 1st axis!
+            covariance_a_b = np.dot(matrix_a_2D.T, matrix_b_2D) / (nt_a-1)
+            # apply the SVD
+            U, sigma, V = np.linalg.svd(covariance_a_b, full_matrices=False,
+                                        compute_uv = True)
+            # Take the 1st mode of left pattern and right pattern and plot
+            mca_a_series = np.dot(matrix_a_2D, U[:,0])
+            mca_left_pattern_1 = U[:,0] * np.std(mca_a_series)
+            
+            mca_b_series = np.dot(matrix_b_2D, V[0,:].T)
+            mca_right_pattern_1 = V[0,:] * np.std(mca_b_series)
+            # Take the 2nd mode of left pattern and right pattern and plot
+            mca_a_series = np.dot(matrix_a_2D, U[:,1])
+            mca_left_pattern_2 = U[:,1] * np.std(mca_a_series)
+            
+            mca_b_series = np.dot(matrix_b_2D, V[1,:].T)
+            mca_right_pattern_2 = V[1,:] * np.std(mca_b_series)
+            # Take the 2nd mode of left pattern and right pattern and plot
+            mca_a_series = np.dot(matrix_a_2D, U[:,2])
+            mca_left_pattern_3 = U[:,2] * np.std(mca_a_series)
+            
+            mca_b_series = np.dot(matrix_b_2D, V[2,:].T)
+            mca_right_pattern_3 = V[2,:] * np.std(mca_b_series)
+            
+        elif dimension == "temporal":
+            covariance_a_b = np.dot(matrix_a_2D, matrix_b_2D.T) / (ny_a*nx_a-1)
+            U, sigma, V = np.linalg.svd(covariance_a_b, full_matrices=False,
+                                        compute_uv = True)
+            # Take the 1st mode of left pattern and right pattern and plot
+            mca_a_series = np.dot(matrix_a_2D.T, U[:,0])
+            mca_left_pattern_1 = U[:,0] * np.std(mca_a_series)
+            
+            mca_b_series = np.dot(matrix_b_2D.T, V[0,:].T)
+            mca_right_pattern_1 = V[0,:] * np.std(mca_b_series)
+            # Take the 2nd mode of left pattern and right pattern and plot
+            mca_a_series = np.dot(matrix_a_2D.T, U[:,1])
+            mca_left_pattern_2 = U[:,1] * np.std(mca_a_series)
+            
+            mca_b_series = np.dot(matrix_b_2D.T, V[1,:].T)
+            mca_right_pattern_2 = V[1,:] * np.std(mca_b_series)
+            # Take the 2nd mode of left pattern and right pattern and plot
+            mca_a_series = np.dot(matrix_a_2D.T, U[:,2])
+            mca_left_pattern_3 = U[:,2] * np.std(mca_a_series)
+            
+            mca_b_series = np.dot(matrix_b_2D.T, V[2,:].T)
+            mca_right_pattern_3 = V[2,:] * np.std(mca_b_series)
+        else:
+            raise IOError("The dimension input is not correct!")
+        # fraction of squared covariance explained
+        # It tells how much squared covariance is expalined by each mode
+        sc = sigma**2 / np.sum(sigma**2)
+
+        if dimension == "spatial":
+            # reshape mca matrix
+            mca_left_pattern_1 = np.reshape(mca_left_pattern_1, 
+                                            [ny_a, nx_a], order='F')
+            mca_right_pattern_1 = np.reshape(mca_right_pattern_1,
+                                             [ny_b, nx_b], order='F')
+            mca_left_pattern_2 = np.reshape(mca_left_pattern_2, 
+                                            [ny_a, nx_a], order='F')
+            mca_right_pattern_2 = np.reshape(mca_right_pattern_2,
+                                             [ny_b, nx_b], order='F')
+            mca_left_pattern_3 = np.reshape(mca_left_pattern_3, 
+                                            [ny_a, nx_a], order='F')
+            mca_right_pattern_3 = np.reshape(mca_right_pattern_3,
+                                             [ny_b, nx_b], order='F')
+        
+        return sc, mca_left_pattern_1, mca_right_pattern_1, mca_left_pattern_2, mca_right_pattern_2, mca_left_pattern_3, mca_right_pattern_3
+    
