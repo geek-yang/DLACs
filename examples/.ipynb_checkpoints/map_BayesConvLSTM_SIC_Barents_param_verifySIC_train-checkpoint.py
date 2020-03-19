@@ -368,7 +368,9 @@ if __name__=="__main__":
     # check the sequence length
     sequence_len, height, width = sic_exp_norm.shape
     # initialize our model
-    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
+    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels,
+                                              kernel_size, cell_type="full").to(device)
+    #model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
     # use Evidence Lower Bound (ELBO) to quantify the loss
     ELBO = dlacs.function.ELBO(height*width)
     # for classification, target must be integers (label)
@@ -418,9 +420,15 @@ if __name__=="__main__":
             # Please Make Sure y_pred & y_train have the same dimension
             # accumulate loss
             if timestep == 0:
-                loss = ELBO(y_pred, y_target, kl_loss, 1 / (len(hidden_channels) * 8 * penalty_kl * kernel_size**2))
+                loss, likelihood, complexity = ELBO(y_pred, y_target, kl_loss,
+                                                    1 / (len(hidden_channels) * 8 * penalty_kl * kernel_size**2))
             else:
-                loss += ELBO(y_pred, y_target, kl_loss, 1 / (len(hidden_channels) * 8 * penalty_kl * kernel_size**2))
+                loss_step, likelihood_step,\
+                complexity_step = ELBO(y_pred, y_target, kl_loss,
+                                       1 / (len(hidden_channels) * 8 * penalty_kl * kernel_size**2))
+                loss += loss_step
+                likelihood += likelihood_step
+                complexity += complexity_step
             #print (timestep)
         #print(y_pred.shape)
         #print(y_train.shape)

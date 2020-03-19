@@ -65,8 +65,11 @@ class ELBO(nn.Module):
     def forward(self, input, target, kl, kl_weight=1.0):
         """
         Kullback-Leibler divergence. This comes from
-        the euqation (4) in Shridhar et. al. 2019, where the first term is
-        indeed the likelihood cost, and the second term is the complexity cost.
+        the euqation (4) in Shridhar et. al. 2019, which consists of likelihood cost
+        (is dependent on data) and complexity cost (id dependent on distribution).
         """
         assert not target.requires_grad
-        return self.loss_function(input, target) * self.train_size + kl_weight * kl
+        likelihood_cost = self.loss_function(input, target)
+        complexity_cost = kl_weight * kl
+        total_loss = likelihood_cost + complexity_cost
+        return total_loss, likelihood_cost, complexity_cost
