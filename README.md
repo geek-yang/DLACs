@@ -26,5 +26,5 @@ Directory structure:
 * `models` Examples of trained models.
 * `tests` Includes unit testing, functional testing and integration testing.
 
-Cite our work :gift_heart:
+## Cite our work :gift_heart:
 DOI:
