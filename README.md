@@ -3,18 +3,28 @@
 
 The module is designed to perform convolutional and recurrent operatiaons on structured climate data. It is built on pytorch.<br/>
 
-## Function
+## Function :computer:
 Two kinds deep neural networks structures are included by the package:
 * Convolutional Long Short Term Memory neural netwroks <br>
 * Bayesian Convolutional Long Short Term Memory neural netwroks <br>
 
 ## Dependency :books:
-META is tested on python 3.6 and has the following dependencies:
+DLACs is tested on python 3.6 and has the following dependencies:
 * numpy
 * matplotlib
+* netCDF4
+* scipy
+* iris
+* cartopy
 * torch
 
 ## Modules :floppy_disk:
 Directory structure:
 * `ConvLSTM` Contains ConvLSTM layer and the forward module.
 * `BayesConvLSTM` Contains BayesConvLSTM layer and the forward module.
+* `example` Examples of how to implement the network structures in this library.
+* `models` Examples of trained models.
+* `tests` Includes unit testing, functional testing and integration testing.
+
+Cite our work :gift_heart:
+DOI:
