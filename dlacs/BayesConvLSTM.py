@@ -224,7 +224,7 @@ class BayesConvLSTMCell(nn.Module):
         # weight Whf
         Whf_mean = self.Whf_mean_out(h, self.Whf_mu)
         Whf_var = torch.exp(self.Whf_log_alpha) * self.Whf_mu * self.Whf_mu
-        Whf_std = torch.sqrt(1e-16 + self.Whf_std_out(h * h, Whi_var))
+        Whf_std = torch.sqrt(1e-16 + self.Whf_std_out(h * h, Whf_var))
         Whf_epsilon = Whf_std.data.new(Whf_std.size()).normal_()
         Whf = Whf_mean + Whf_std * Whf_epsilon
         
@@ -238,7 +238,7 @@ class BayesConvLSTMCell(nn.Module):
         # weight Whc
         Whc_mean = self.Whc_mean_out(h, self.Whc_mu)
         Whc_var = torch.exp(self.Whc_log_alpha) * self.Whc_mu * self.Whc_mu
-        Whc_std = torch.sqrt(1e-16 + self.Whc_std_out(h * h, Whi_var))
+        Whc_std = torch.sqrt(1e-16 + self.Whc_std_out(h * h, Whc_var))
         Whc_epsilon = Whc_std.data.new(Whc_std.size()).normal_()
         Whc = Whc_mean + Whc_std * Whc_epsilon
 
@@ -252,7 +252,7 @@ class BayesConvLSTMCell(nn.Module):
         # weight Whc
         Who_mean = self.Who_mean_out(h, self.Who_mu)
         Who_var = torch.exp(self.Who_log_alpha) * self.Who_mu * self.Who_mu
-        Who_std = torch.sqrt(1e-16 + self.Who_std_out(h * h, Whi_var))
+        Who_std = torch.sqrt(1e-16 + self.Who_std_out(h * h, Who_var))
         Who_epsilon = Who_std.data.new(Who_std.size()).normal_()
         Who = Who_mean + Who_std * Who_epsilon
         
@@ -495,7 +495,7 @@ class BayesConvLSTMCell_F(nn.Module):
         # weight Whf
         Whf_mean = self.Whf_mean_out(h, self.Whf_mu)
         Whf_var = torch.exp(self.Whf_log_var)
-        Whf_std = torch.sqrt(1e-16 + self.Whf_std_out(h * h, Whi_var))
+        Whf_std = torch.sqrt(1e-16 + self.Whf_std_out(h * h, Whf_var))
         Whf_epsilon = Whf_std.data.new(Whf_std.size()).normal_()
         Whf = Whf_mean + Whf_std * Whf_epsilon
         
@@ -509,7 +509,7 @@ class BayesConvLSTMCell_F(nn.Module):
         # weight Whc
         Whc_mean = self.Whc_mean_out(h, self.Whc_mu)
         Whc_var = torch.exp(self.Whc_log_var)
-        Whc_std = torch.sqrt(1e-16 + self.Whc_std_out(h * h, Whi_var))
+        Whc_std = torch.sqrt(1e-16 + self.Whc_std_out(h * h, Whc_var))
         Whc_epsilon = Whc_std.data.new(Whc_std.size()).normal_()
         Whc = Whc_mean + Whc_std * Whc_epsilon
 
@@ -523,7 +523,7 @@ class BayesConvLSTMCell_F(nn.Module):
         # weight Whc
         Who_mean = self.Who_mean_out(h, self.Who_mu)
         Who_var = torch.exp(self.Who_log_var)
-        Who_std = torch.sqrt(1e-16 + self.Who_std_out(h * h, Whi_var))
+        Who_std = torch.sqrt(1e-16 + self.Who_std_out(h * h, Who_var))
         Who_epsilon = Who_std.data.new(Who_std.size()).normal_()
         Who = Who_mean + Who_std * Who_epsilon
         
