@@ -436,8 +436,8 @@ if __name__=="__main__":
         #print(y_train.shape)
         # print loss at certain iteration
         if t % 5 == 0:
-            print("Epoch {:0.3f} ELBO: {:0.3f}".format(t, loss.item()))
-            logging.info("Epoch {:0.3f} MSE: {:0.3f}".format(t,loss.item()))
+            print("Epoch {} ELBO: {:0.3f}".format(t, loss.item()))
+            logging.info("Epoch {} MSE: {:0.3f}".format(t,loss.item()))
             print("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
             logging.info("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
             #print(y_pred)

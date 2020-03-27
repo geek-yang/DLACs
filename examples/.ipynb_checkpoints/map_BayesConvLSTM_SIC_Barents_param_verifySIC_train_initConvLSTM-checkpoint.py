@@ -41,6 +41,7 @@ import torch.nn.functional
 #sys.path.append("C:\\Users\\nosta\\ML4Climate\\Scripts\\DLACs")
 sys.path.append("../")
 import dlacs
+import dlacs.ConvLSTM
 import dlacs.BayesConvLSTM
 import dlacs.preprocess
 import dlacs.function
@@ -366,9 +367,9 @@ if __name__=="__main__":
     ##################################################################################
     print ('*******************  load exsited LSTM model  *********************')
     # load model parameters
-    model_init = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
+    model_init = dlacs.ConvLSTM.ConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
     model_init.load_state_dict(torch.load(os.path.join(init_path,
-                               'map_BayesConvLSTM_sic_ohc_Barents_hl_1_kernel_3_lr_0.01_epoch_500_validSIC_dict.pkl'), map_location=device))
+                               'convlstm_era_sic_oras_ohc_Barents_hl_1_kernel_3_lr_0.01_epoch_500_validSIC_dict.pkl'), map_location=device))
     # load entire model
     #model_init = torch.load(os.path.join(init_path, 'convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     print(model_init)
@@ -452,8 +453,8 @@ if __name__=="__main__":
         #print(y_train.shape)
         # print loss at certain iteration
         if t % 5 == 0:
-            print("Epoch {:0.3f} ELBO: {:0.3f}".format(t, loss.item()))
-            logging.info("Epoch {:0.3f} MSE: {:0.3f}".format(t,loss.item()))
+            print("Epoch {} ELBO: {:0.3f}".format(t, loss.item()))
+            logging.info("Epoch {} MSE: {:0.3f}".format(t,loss.item()))
             print("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
             logging.info("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
             #print(y_pred)
