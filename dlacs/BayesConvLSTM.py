@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Bayesian Convolutional LSTM for one step prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2020.02.18
-Last Update     : 2020.03.20
+Last Update     : 2020.03.27
 Description     : This module provides several methods to perform Bayesian deep learning
                   on climate data. It is designed for weather/climate prediction with 
                   spatial-temporal sequence data. The main method here is the
@@ -42,14 +42,16 @@ class BayesConvLSTMCell(nn.Module):
     distribution is modelled with a factor and the square of mean, which reduces
     weight matrix.
     """
-    def __init__(self, input_channels, hidden_channels, kernel_size,
-                 alpha_shape=(1,1), stride=1, padding=0, dilation=1, bias=True):
+    def __init__(self, input_channels, hidden_channels, kernel_size, weight_dict = None,
+                 cell_index = None, alpha_shape=(1,1), stride=1, padding=0, dilation=1, bias=True):
         """
         Build Bayesian Convolutional LSTM Cell with a distribution over each gate (weights)
         in the layer. The cell is designed to enable the implementation of back-propagation process.
         param input_channels: number of channels (variables) from input fields
         param hidden_channels: number of channels inside hidden layers, the dimension correponds to the output size
         param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
+        param weight_dict: weight matrix for the initialization of mu (mean)
+        param cell_index: index of created BayesConvLSTM cell
         param alpha_shape: the scalar multiplier
         param stride: number of pixels by which the window moves after each operation
         param padding: number of pixels to preserve the input shape and information from edge
@@ -72,6 +74,10 @@ class BayesConvLSTMCell(nn.Module):
         self.alpha_shape = alpha_shape
         self.groups = 1 # split input into groups (input_channels) should be divisible by the number of groups'
         self.bias = bias
+        
+        # inherit weight matrix for mu
+        self.weight_dict = weight_dict
+        self.cell_index = cell_index
 
         # weight/filter/kernel for the mean (mu) of each gate
         self.Wxi_mu = Parameter(torch.Tensor(hidden_channels, input_channels, *self.kernel_size))
@@ -154,25 +160,42 @@ class BayesConvLSTMCell(nn.Module):
               as N(mu,alpha x mu^2). Therefore alpha is smaller than 1 and log_alpha is
               smaller than 0.
         """
-        n = self.input_channels
-        for k in self.kernel_size:
-            n *= k
-        stdv = 1. / math.sqrt(n)
-        # reset mu
-        self.Wxi_mu.data.uniform_(-stdv, stdv)
-        self.Whi_mu.data.uniform_(-stdv, stdv)
-        self.Wxf_mu.data.uniform_(-stdv, stdv)
-        self.Whf_mu.data.uniform_(-stdv, stdv)
-        self.Wxc_mu.data.uniform_(-stdv, stdv)
-        self.Whc_mu.data.uniform_(-stdv, stdv)
-        self.Wxo_mu.data.uniform_(-stdv, stdv)
-        self.Who_mu.data.uniform_(-stdv, stdv)
-        # reset bias
-        if self.bias is not None:
-            self.Wxi_bias.data.uniform_(-stdv, stdv)
-            self.Wxf_bias.data.uniform_(-stdv, stdv)
-            self.Wxc_bias.data.uniform_(-stdv, stdv)
-            self.Wxo_bias.data.uniform_(-stdv, stdv)
+        if self.weight_dict is None:
+            n = self.input_channels
+            for k in self.kernel_size:
+                n *= k
+            stdv = 1. / math.sqrt(n)
+            # reset mu
+            self.Wxi_mu.data.uniform_(-stdv, stdv)
+            self.Whi_mu.data.uniform_(-stdv, stdv)
+            self.Wxf_mu.data.uniform_(-stdv, stdv)
+            self.Whf_mu.data.uniform_(-stdv, stdv)
+            self.Wxc_mu.data.uniform_(-stdv, stdv)
+            self.Whc_mu.data.uniform_(-stdv, stdv)
+            self.Wxo_mu.data.uniform_(-stdv, stdv)
+            self.Who_mu.data.uniform_(-stdv, stdv)
+            # reset bias
+            if self.bias is not None:
+                self.Wxi_bias.data.uniform_(-stdv, stdv)
+                self.Wxf_bias.data.uniform_(-stdv, stdv)
+                self.Wxc_bias.data.uniform_(-stdv, stdv)
+                self.Wxo_bias.data.uniform_(-stdv, stdv)
+        else:
+            self.Wxi_mu.data = self.weight_dict['cell{}.Wxi.weight'.format(self.cell_index)].data
+            self.Whi_mu.data = self.weight_dict['cell{}.Whi.weight'.format(self.cell_index)].data
+            self.Wxf_mu.data = self.weight_dict['cell{}.Wxf.weight'.format(self.cell_index)].data
+            self.Whf_mu.data = self.weight_dict['cell{}.Whf.weight'.format(self.cell_index)].data
+            self.Wxc_mu.data = self.weight_dict['cell{}.Wxc.weight'.format(self.cell_index)].data
+            self.Whc_mu.data = self.weight_dict['cell{}.Whc.weight'.format(self.cell_index)].data
+            self.Wxo_mu.data = self.weight_dict['cell{}.Wxo.weight'.format(self.cell_index)].data
+            self.Who_mu.data = self.weight_dict['cell{}.Who.weight'.format(self.cell_index)].data
+            # reset bias
+            if self.bias is not None:
+                self.Wxi_bias.data = self.weight_dict['cell{}.Wxi.bias'.format(self.cell_index)].data
+                self.Wxf_bias.data = self.weight_dict['cell{}.Wxf.bias'.format(self.cell_index)].data
+                self.Wxc_bias.data = self.weight_dict['cell{}.Wxc.bias'.format(self.cell_index)].data
+                self.Wxo_bias.data = self.weight_dict['cell{}.Wxo.bias'.format(self.cell_index)].data
+                
         # reset log alpha
         self.Wxi_log_alpha.data.fill_(-3.0)
         self.Whi_log_alpha.data.fill_(-3.0)
@@ -313,14 +336,16 @@ class BayesConvLSTMCell_F(nn.Module):
     This is a full size Bayesian Convolutional LSTM Cell. The variance and mean of 
     Gaussian distribution are represented by two independent weight matrix.
     """
-    def __init__(self, input_channels, hidden_channels, kernel_size,
-                 stride=1, padding=0, dilation=1, bias=True):
+    def __init__(self, input_channels, hidden_channels, kernel_size, weight_dict = None,
+                 cell_index = None, stride=1, padding=0, dilation=1, bias=True):
         """
         Build Bayesian Convolutional LSTM Cell with a distribution over each gate (weights)
         in the layer. The cell is designed to enable the implementation of back-propagation process.
         param input_channels: number of channels (variables) from input fields
         param hidden_channels: number of channels inside hidden layers, the dimension correponds to the output size
         param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
+        param weight_dict: weight matrix for the initialization of mu (mean)
+        param cell_index: index of created BayesConvLSTM cell
         param alpha_shape: the scalar multiplier
         param stride: number of pixels by which the window moves after each operation
         param padding: number of pixels to preserve the input shape and information from edge
@@ -343,6 +368,10 @@ class BayesConvLSTMCell_F(nn.Module):
         #self.alpha_shape = alpha_shape
         self.groups = 1 # split input into groups (input_channels) should be divisible by the number of groups'
         self.bias = bias
+        
+        # inherit weight matrix for mu
+        self.weight_dict = weight_dict
+        self.cell_index = cell_index
 
         # weight/filter/kernel for the mean (mu) of each gate
         self.Wxi_mu = Parameter(torch.Tensor(hidden_channels, input_channels, *self.kernel_size))
@@ -425,25 +454,41 @@ class BayesConvLSTMCell_F(nn.Module):
               as N(mu,alpha x mu^2). Therefore alpha is smaller than 1 and log_alpha is
               smaller than 0.
         """
-        n = self.input_channels
-        for k in self.kernel_size:
-            n *= k
-        stdv = 1. / math.sqrt(n)
-        # reset mu
-        self.Wxi_mu.data.uniform_(-stdv, stdv)
-        self.Whi_mu.data.uniform_(-stdv, stdv)
-        self.Wxf_mu.data.uniform_(-stdv, stdv)
-        self.Whf_mu.data.uniform_(-stdv, stdv)
-        self.Wxc_mu.data.uniform_(-stdv, stdv)
-        self.Whc_mu.data.uniform_(-stdv, stdv)
-        self.Wxo_mu.data.uniform_(-stdv, stdv)
-        self.Who_mu.data.uniform_(-stdv, stdv)
-        # reset bias
-        if self.bias is not None:
-            self.Wxi_bias.data.uniform_(-stdv, stdv)
-            self.Wxf_bias.data.uniform_(-stdv, stdv)
-            self.Wxc_bias.data.uniform_(-stdv, stdv)
-            self.Wxo_bias.data.uniform_(-stdv, stdv)
+        if self.weight_dict is None:
+            n = self.input_channels
+            for k in self.kernel_size:
+                n *= k
+            stdv = 1. / math.sqrt(n)
+            # reset mu
+            self.Wxi_mu.data.uniform_(-stdv, stdv)
+            self.Whi_mu.data.uniform_(-stdv, stdv)
+            self.Wxf_mu.data.uniform_(-stdv, stdv)
+            self.Whf_mu.data.uniform_(-stdv, stdv)
+            self.Wxc_mu.data.uniform_(-stdv, stdv)
+            self.Whc_mu.data.uniform_(-stdv, stdv)
+            self.Wxo_mu.data.uniform_(-stdv, stdv)
+            self.Who_mu.data.uniform_(-stdv, stdv)
+            # reset bias
+            if self.bias is not None:
+                self.Wxi_bias.data.uniform_(-stdv, stdv)
+                self.Wxf_bias.data.uniform_(-stdv, stdv)
+                self.Wxc_bias.data.uniform_(-stdv, stdv)
+                self.Wxo_bias.data.uniform_(-stdv, stdv)
+        else:
+            self.Wxi_mu.data = self.weight_dict['cell{}.Wxi.weight'.format(self.cell_index)].data
+            self.Whi_mu.data = self.weight_dict['cell{}.Whi.weight'.format(self.cell_index)].data
+            self.Wxf_mu.data = self.weight_dict['cell{}.Wxf.weight'.format(self.cell_index)].data
+            self.Whf_mu.data = self.weight_dict['cell{}.Whf.weight'.format(self.cell_index)].data
+            self.Wxc_mu.data = self.weight_dict['cell{}.Wxc.weight'.format(self.cell_index)].data
+            self.Whc_mu.data = self.weight_dict['cell{}.Whc.weight'.format(self.cell_index)].data
+            self.Wxo_mu.data = self.weight_dict['cell{}.Wxo.weight'.format(self.cell_index)].data
+            self.Who_mu.data = self.weight_dict['cell{}.Who.weight'.format(self.cell_index)].data
+            # reset bias
+            if self.bias is not None:
+                self.Wxi_bias.data = self.weight_dict['cell{}.Wxi.bias'.format(self.cell_index)].data
+                self.Wxf_bias.data = self.weight_dict['cell{}.Wxf.bias'.format(self.cell_index)].data
+                self.Wxc_bias.data = self.weight_dict['cell{}.Wxc.bias'.format(self.cell_index)].data
+                self.Wxo_bias.data = self.weight_dict['cell{}.Wxo.bias'.format(self.cell_index)].data
         # reset log var
         self.Wxi_log_var.data.fill_(-3.0)
         self.Whi_log_var.data.fill_(-3.0)
@@ -581,17 +626,21 @@ class BayesConvLSTMCell_F(nn.Module):
 class BayesConvLSTM(nn.Module):
     """
     This is the main BayesConvLSTM module.
-    param input_channels: number of channels (variables) from input fields
-    param hidden_channels: number of channels inside hidden layers, for multiple layers use tuple, the dimension correponds to the output size
-    param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
-    param step: this parameter indicates the time step to predict ahead of the given data
-    param effective_step: this parameter determines the source of the final output from the chosen step
-    param cell_type: determines the type of cell to be used by the neural network, options are
-                     "reduced" and "full"
+
     """
     # input_channels corresponds to the first input feature map
     # hidden state is a list of succeeding lstm layers.
-    def __init__(self, input_channels, hidden_channels, kernel_size, cell_type='reduced'):
+    def __init__(self, input_channels, hidden_channels, kernel_size, cell_type='reduced', weight_dict = None):
+        """
+        param input_channels: number of channels (variables) from input fields
+        param hidden_channels: number of channels inside hidden layers, for multiple layers use tuple, the dimension correponds to the output size
+        param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
+        param step: this parameter indicates the time step to predict ahead of the given data
+        param effective_step: this parameter determines the source of the final output from the chosen step
+        param cell_type: determines the type of cell to be used by the neural network, options are
+                     "reduced" and "full"
+        param weight_dict: weight matrix of trained models
+        """
         super(BayesConvLSTM, self).__init__()
         self.input_channels = [input_channels] + hidden_channels
         self.hidden_channels = hidden_channels
@@ -605,9 +654,17 @@ class BayesConvLSTM(nn.Module):
         for i in range(self.num_layers):
             name = 'cell{}'.format(i)
             if cell_type == "reduced":
-                cell = BayesConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
+                if weight_dict is None:
+                    cell = BayesConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
+                else:
+                    cell = BayesConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size,
+                                             weight_dict, i)
             elif cell_type == "full":
-                cell = BayesConvLSTMCell_F(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
+                if weight_dict is None:
+                    cell = BayesConvLSTMCell_F(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
+                else:
+                    cell = BayesConvLSTMCell_F(self.input_channels[i], self.hidden_channels[i], self.kernel_size,
+                                               weight_dict, i)
             else:
                 raise IOError("Please choose the right type of BayesConvLSTM cell. Check the documentation for more information.")
             setattr(self, name, cell)
