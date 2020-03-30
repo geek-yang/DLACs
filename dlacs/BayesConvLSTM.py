@@ -197,14 +197,14 @@ class BayesConvLSTMCell(nn.Module):
                 self.Wxo_bias.data = self.weight_dict['cell{}.Wxo.bias'.format(self.cell_index)].data
                 
         # reset log alpha
-        self.Wxi_log_alpha.data.fill_(-3.0)
-        self.Whi_log_alpha.data.fill_(-3.0)
-        self.Wxf_log_alpha.data.fill_(-3.0)
-        self.Whf_log_alpha.data.fill_(-3.0)
-        self.Wxc_log_alpha.data.fill_(-3.0)
-        self.Whc_log_alpha.data.fill_(-3.0)
-        self.Wxo_log_alpha.data.fill_(-3.0)
-        self.Who_log_alpha.data.fill_(-3.0)
+        self.Wxi_log_alpha.data.fill_(-5.0)
+        self.Whi_log_alpha.data.fill_(-5.0)
+        self.Wxf_log_alpha.data.fill_(-5.0)
+        self.Whf_log_alpha.data.fill_(-5.0)
+        self.Wxc_log_alpha.data.fill_(-5.0)
+        self.Whc_log_alpha.data.fill_(-5.0)
+        self.Wxo_log_alpha.data.fill_(-5.0)
+        self.Who_log_alpha.data.fill_(-5.0)
         
     def forward(self, x, h, c, training=True):
         """
@@ -222,7 +222,7 @@ class BayesConvLSTMCell(nn.Module):
         # weight Wxi
         Wxi_mean = self.Wxi_mean_out(x, self.Wxi_mu, self.Wxi_bias)
         Wxi_var = torch.exp(self.Wxi_log_alpha) * self.Wxi_mu * self.Wxi_mu
-        Wxi_std = torch.sqrt(1e-10 + self.Wxi_std_out(x * x, Wxi_var))
+        Wxi_std = torch.sqrt(1e-16 + self.Wxi_std_out(x * x, Wxi_var))
         # Sample Gaussian distribution for both training and prediction
         # create a tensor of Gaussian noise, the same shape and data type as input tensor
         # nn.Tensor.new() Constructs a new tensor of the same data type as self tensor.
@@ -490,14 +490,14 @@ class BayesConvLSTMCell_F(nn.Module):
                 self.Wxc_bias.data = self.weight_dict['cell{}.Wxc.bias'.format(self.cell_index)].data
                 self.Wxo_bias.data = self.weight_dict['cell{}.Wxo.bias'.format(self.cell_index)].data
         # reset log var
-        self.Wxi_log_var.data.fill_(-3.0)
-        self.Whi_log_var.data.fill_(-3.0)
-        self.Wxf_log_var.data.fill_(-3.0)
-        self.Whf_log_var.data.fill_(-3.0)
-        self.Wxc_log_var.data.fill_(-3.0)
-        self.Whc_log_var.data.fill_(-3.0)
-        self.Wxo_log_var.data.fill_(-3.0)
-        self.Who_log_var.data.fill_(-3.0)
+        self.Wxi_log_var.data.fill_(-10.0)
+        self.Whi_log_var.data.fill_(-10.0)
+        self.Wxf_log_var.data.fill_(-10.0)
+        self.Whf_log_var.data.fill_(-10.0)
+        self.Wxc_log_var.data.fill_(-10.0)
+        self.Whc_log_var.data.fill_(-10.0)
+        self.Wxo_log_var.data.fill_(-10.0)
+        self.Who_log_var.data.fill_(-10.0)
         
     def forward(self, x, h, c, training=True):
         """
@@ -515,7 +515,7 @@ class BayesConvLSTMCell_F(nn.Module):
         # weight Wxi
         Wxi_mean = self.Wxi_mean_out(x, self.Wxi_mu, self.Wxi_bias)
         Wxi_var = torch.exp(self.Wxi_log_var)
-        Wxi_std = torch.sqrt(1e-10 + self.Wxi_std_out(x * x, Wxi_var))
+        Wxi_std = torch.sqrt(1e-16 + self.Wxi_std_out(x * x, Wxi_var))
         # Sample Gaussian distribution for both training and prediction
         # create a tensor of Gaussian noise, the same shape and data type as input tensor
         # nn.Tensor.new() Constructs a new tensor of the same data type as self tensor.

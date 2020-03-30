@@ -400,6 +400,8 @@ if __name__=="__main__":
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     # Adam optimizer
     optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # L2 regularization
+    #optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.01)
     print(model)
     print(ELBO)
     print(optimiser)
@@ -492,3 +494,14 @@ if __name__=="__main__":
     plt.ylabel('Error')
     plt.legend()
     fig00.savefig(os.path.join(output_path,'SIC_ERAI_LSTM_pred_error_init.png'),dpi=200)
+    
+    print ("*******************  Loss with time (log)  **********************")
+    fig01 = plt.figure()
+    plt.plot(np.log(hist), 'r', label="Training loss")
+    plt.plot(np.log(hist_likelihood), 'g', label="Likelihood loss")
+    plt.plot(np.log(hist_complexity), 'b', label="Complexity loss")
+    plt.xlabel('Epoch')
+    plt.ylabel('Log error')
+    plt.legend()
+    plt.show()
+    fig01.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_pred_log_error.png'),dpi=200)
