@@ -613,3 +613,22 @@ class operator:
         
         return sc, mca_left_pattern_1, mca_right_pattern_1, mca_left_pattern_2, mca_right_pattern_2, mca_left_pattern_3, mca_right_pattern_3
     
+def week2month(series, m):
+    """
+    Select certain month from yearly data at weekly resolution.
+    Parameters
+    ----------
+    series : array-like
+        Three-dimensional numeric arrays with time as the first dimenison [time, lat, lon]
+    m: int
+        Month (from 1 to 12).
+    """
+    time_year, lat, lon = series.shape
+    time_month = time_year // 12
+    series_month = np.zeros((time_month, lat, lon), dtype=float)
+    series_month[::4,:,:] = series[(m-1)*4::48,:,:]
+    series_month[1::4,:,:] = series[(m-1)*4+1::48,:,:]
+    series_month[2::4,:,:] = series[(m-1)*4+2::48,:,:]
+    series_month[3::4,:,:] = series[(m-1)*4+3::48,:,:]
+    
+    return series_month
