@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Plots generator for visualization
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2018.08.13
-Last Update     : 2018.08.13
+Last Update     : 2020.04.02
 Contributor     :
 Description     : This module provides several methods to perform statistical
                   analysis on MET and all kinds of fields.
@@ -612,7 +612,90 @@ class plots:
                 print ('This boundary is not supported by the module. Please check the documentation.')                
         else:
             raise IOError("This module only support fields on geographical or curvilinear grid!")
+
+    @staticmethod
+    def location(latitude, longitude, figname='./NorthPolar.png', boundary='northhem'):
+        """
+        Blank map for position pin-point.
         
+        param lat: latitude coordinate for plot
+        param lon: longitude coordinate for plot
+        param figname: name and output path of figure
+        param boundary: region for plot. It determines the boundary of plot area (lat,lon) and projection.
+        - northhem (default) plot the north hemisphere from 20N-90N & 180W-180E, with the projection NorthPolarStereo.
+        - atlantic plot the north Atlantic from 20N-90N & 90W-40E, with the projection PlateCarree
+        return: figures
+        rtype: png        
+        """
+        if boundary == 'northhem':
+            fig = plt.figure()
+            ax = plt.axes(projection=ccrs.NorthPolarStereo())
+            #ax.set_extent([-180,180,20,90],ccrs.PlateCarree())
+            ax.set_extent([-180,180,50,90],ccrs.PlateCarree())
+            ax.set_aspect('1')
+            ax.coastlines()
+            gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
+            theta = np.linspace(0, 2*np.pi, 100)
+            center, radius = [0.5, 0.5], 0.5
+            verts = np.vstack([np.sin(theta), np.cos(theta)]).T
+            circle = mpath.Path(verts * radius + center)
+            ax.set_boundary(circle, transform=ax.transAxes)
+            ax.scatter(longitude, latitude, transform=ccrs.Geodetic(),
+                       s=20.0, c='green',alpha=0.9)
+            plt.show()
+            fig.savefig(figname, dpi=200)
+            plt.close(fig)
+        elif boundary == 'atlantic':
+            fig = plt.figure(figsize=(8,5.4))
+            ax = plt.axes(projection=ccrs.PlateCarree())
+            ax.set_extent([-90,40,20,85],ccrs.PlateCarree())
+            ax.set_aspect('1')
+            ax.coastlines()
+            gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                              linewidth=1, color='gray', alpha=0.5, linestyle='--')
+            gl.xlabels_top = False
+            gl.xformatter = LONGITUDE_FORMATTER
+            gl.yformatter = LATITUDE_FORMATTER
+            gl.xlabel_style = {'size': 11, 'color': 'gray'}
+            gl.ylabel_style = {'size': 11, 'color': 'gray'}
+            ax.scatter(longitude, latitude, transform=ccrs.Geodetic(),
+                       s=20.0, c='green',alpha=0.9)
+            plt.show()
+            fig.savefig(figname, dpi=200)
+            plt.close(fig)
+        elif boundary == 'barents_plateCarree':
+            fig = plt.figure(figsize=(6,5.4))
+            ax = plt.axes(projection=ccrs.PlateCarree())
+            ax.set_extent([15,65,60,85],ccrs.PlateCarree()) # W:18 E:60 S:64 N:80
+            ax.set_aspect('1')
+            ax.coastlines()
+            gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                              linewidth=1, color='gray', alpha=0.5, linestyle='--')
+            gl.xlabels_top = False
+            gl.xformatter = LONGITUDE_FORMATTER
+            gl.yformatter = LATITUDE_FORMATTER
+            gl.xlabel_style = {'size': 11, 'color': 'gray'}
+            gl.ylabel_style = {'size': 11, 'color': 'gray'}
+            ax.scatter(longitude, latitude, transform=ccrs.Geodetic(),
+                       s=20.0, c='green',alpha=0.9)
+            plt.show()
+            fig.savefig(figname, dpi=200)
+            plt.close(fig)
+        elif boundary == 'barents_polar':
+            fig = plt.figure()
+            ax = plt.axes(projection=ccrs.EquidistantConic(central_longitude=39.0, central_latitude=72.0))
+            ax.set_extent([16,60,60,82],ccrs.PlateCarree()) # W:18 E:60 S:64 N:80
+            ax.set_aspect('1')
+            ax.coastlines()
+            gl = ax.gridlines(linewidth=1, color='gray', alpha=0.5, linestyle='--')
+            ax.scatter(longitude, latitude, transform=ccrs.Geodetic(),
+                       s=20.0, c='green',alpha=1.0)
+            plt.show()
+            fig.savefig(figname, dpi=200)
+            plt.close(fig)            
+        else:
+            print ('This boundary is not supported by the module. Please check the documentation.')            
+            
 def qqplot(x, y, quantiles=None, interpolation='nearest', ax=None, rug=False,
            rug_length=0.05, rug_kwargs=None, **kwargs):
     """Draw a quantile-quantile plot for `x` versus `y`.

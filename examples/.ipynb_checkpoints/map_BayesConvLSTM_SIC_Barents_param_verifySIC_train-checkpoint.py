@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Train model
 Author       : Yang Liu
 First Built  : 2020.03.09
-Last Update  : 2020.03.12
+Last Update  : 2020.04.02
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -474,4 +474,15 @@ if __name__=="__main__":
     plt.xlabel('Epoch')
     plt.ylabel('Error')
     plt.legend()
-    fig00.savefig(os.path.join(output_path,'SIC_ERAI_LSTM_pred_error.png'),dpi=200)
+    fig00.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_pred_error_init.png'),dpi=200)
+    
+    print ("*******************  Loss with time (log)  **********************")
+    fig01 = plt.figure()
+    plt.plot(np.log(hist), 'r', label="Training loss")
+    plt.plot(np.log(hist_likelihood), 'g', label="Likelihood loss")
+    plt.plot(np.log(hist_complexity), 'b', label="Complexity loss")
+    plt.xlabel('Epoch')
+    plt.ylabel('Log error')
+    plt.legend()
+    plt.show()
+    fig01.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_pred_log_error_init.png'),dpi=200)
