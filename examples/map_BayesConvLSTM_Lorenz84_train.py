@@ -205,7 +205,9 @@ if __name__=="__main__":
     height = 1
     width = 1
     # initialize our model
-    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
+    #model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
+    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels,
+                                              kernel_size, cell_type="full").to(device)
     # use Evidence Lower Bound (ELBO) to quantify the loss
     ELBO = dlacs.function.ELBO(height*width)
     # penalty for kl

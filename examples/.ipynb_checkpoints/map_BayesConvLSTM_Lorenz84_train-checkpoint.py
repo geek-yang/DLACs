@@ -40,6 +40,8 @@ import dlacs.function
 # for visualization
 import dlacs.visual
 import matplotlib
+# Generate images without having a window appear
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import iris # also helps with regriding
@@ -187,6 +189,7 @@ if __name__=="__main__":
     # check if CUDA is available
     use_cuda = torch.cuda.is_available()
     print("Is CUDA available? {}".format(use_cuda))
+    logging.info("Is CUDA available? {}".format(use_cuda))
     # CUDA settings torch.__version__ must > 0.4
     # !!! This is important for the model!!! The first option is gpu
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")   
@@ -202,7 +205,9 @@ if __name__=="__main__":
     height = 1
     width = 1
     # initialize our model
-    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
+    #model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
+    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels,
+                                              kernel_size, cell_type="full").to(device)
     # use Evidence Lower Bound (ELBO) to quantify the loss
     ELBO = dlacs.function.ELBO(height*width)
     # penalty for kl
@@ -256,13 +261,17 @@ if __name__=="__main__":
                                        1 / (len(hidden_channels) * 8 * penalty_kl * kernel_size**2))
                 loss += loss_step
                 likelihood += likelihood_step
-                complexity += complexity_step           
+                complexity += complexity_step
         #print(y_pred.shape)
         #print(y_train.shape)
         # print loss at certain iteration
         if t % 10 == 0:
             print("Epoch {} ELBO: {:0.3f}".format(t, loss.item()))
+            logging.info("Epoch {} MSE: {:0.3f}".format(t,loss.item()))
             print("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
+            logging.info("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
+            print("=========================================")
+            logging.info("==========================================")
             # gradient check
             # Gradcheck requires double precision numbers to run
             #res = torch.autograd.gradcheck(loss_fn, (y_pred.double(), y_train.double()), eps=1e-6, raise_exception=True)
