@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function        : Evaluation matrix
-Author          : Yang Liu (y.liu@esciencecenter.nl)
+Function       : Evaluation matrix
+Author         : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2020.04.01
-Last Update     : 2020.04.01
+Last Update     : 2020.04.28
 Contributor     :
 Description     : This scripts provides the basic functions, which will be used by other modules.
-Return Values   : time series / array
-Caveat!         :
+Return Values    : time series / array
+Caveat!        :
 """
 
 import math
@@ -145,3 +145,78 @@ def precision(pred, label):
                                                        np.sum(falsePositive.astype(float),0))
        
     return np.nan_to_num(prec_seq), np.nan_to_num(prec_spa)
+
+def CRPS(obs, pred, data_structure="sequencial"):
+    """
+    Calculate the continuous ranked probability score (CRPS) for a set of
+    explicit forecast realizations.
+    
+    The CRPS compares the empirical distribution of an ensemble forecast
+    to a scalar observation. Smaller scores indicate better skill.
+    
+    param obs: deterministic/ensemble observation with the shape [timesteps] / [ensemble, timesteps]
+    param pred: an ensemble of forecast with the shape [ensemble, timesteps]
+    param data_structure: structure of data, must be "sequencial" or "spacial"
+    
+    CRPS is defined for one-dimensional random variables with a probability
+    density $p(x)$,
+    
+    .. math::
+        CRPS(F, x) = \int_z (F(z) - H(z - x))^2 dz
+        
+    where $F(x) = \int_{z \leq x} p(z) dz$ is the cumulative distribution
+    function (CDF) of the forecast distribution $F$ and $H(x)$ denotes the
+    Heaviside step function, where $x$ is a point estimate of the true
+    observation (observational error is neglected).
+    
+    This function calculates CRPS efficiently using the empirical CDF:
+    http://en.wikipedia.org/wiki/Empirical_distribution_function
+    """
+    if data_structure == "sequencial":
+        #print("Input timeseries")
+        ens, t = pred.shape
+        # sort the forecast matrix following the ensemble axis
+        pred_sort = np.sort(pred, axis=0)
+        # calculate the Heaviside function
+        H = np.zeros(pred.shape,dtype=float)
+        # calculate Heaviside function
+        obs_h = np.repeat(obs[np.newaxis,:], ens, 0)
+        H[pred_sort>obs_h] = 1.0
+        # compute the CDF
+        cdf_unit = np.arange(1,ens+1,1)
+        cdf = np.repeat(cdf_unit[:,np.newaxis], t, 1) * 1.0 / ens
+        # calculate dz
+        dz = np.zeros(pred.shape,dtype=float)
+        dz[1:,:] = pred_sort[1:,:] - pred_sort[:-1,:]
+        # calculate CRPS
+        CRPS = (cdf - H) ** 2 * dz
+        CRPS_int = np.sum(CRPS, 0)
+        CRPS_mean = np.mean(CRPS_int)
+    elif data_structure == "spacial":
+        #print("Input temporal-spatial sequence")
+        ens, t, y, x = pred.shape
+        # sort the forecast matrix following the ensemble axis
+        pred_sort = np.sort(pred, axis=0)
+        # calculate the Heaviside function
+        H = np.zeros(pred.shape,dtype=float)
+        # calculate Heaviside function
+        obs_h = np.repeat(obs[np.newaxis,:,:,:], ens, 0)
+        H[pred_sort>obs_h] = 1.0
+        # compute the CDF
+        cdf_unit = np.arange(1,ens+1,1)
+        cdf_2D = np.repeat(cdf_unit[:,np.newaxis], t, 1) * 1.0 / ens
+        cdf_3D = np.repeat(cdf_2D[:,:,np.newaxis], y, 2)
+        cdf = np.repeat(cdf_3D[:,:,:,np.newaxis], x, 3)
+        # calculate dz
+        dz = np.zeros(pred.shape,dtype=float)
+        dz[1:,:,:,:] = pred_sort[1:,:,:,:] - pred_sort[:-1,:,:,:]
+        # calculate CRPS
+        CRPS = (cdf - H) ** 2 * dz
+        CRPS_int = np.sum(CRPS, 0)
+        CRPS_mean = np.mean(CRPS_int)
+    else:
+        raise IOError("The chosen data structure is not supported!")
+    
+    return CRPS_int, CRPS_mean
+        
+        
