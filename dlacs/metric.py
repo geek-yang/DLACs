@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function       : Evaluation matrix
 Author         : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2020.04.01
-Last Update     : 2020.04.28
+Last Update     : 2020.05.05
 Contributor     :
 Description     : This scripts provides the basic functions, which will be used by other modules.
 Return Values    : time series / array
@@ -154,7 +154,7 @@ def CRPS(obs, pred, data_structure="sequencial"):
     The CRPS compares the empirical distribution of an ensemble forecast
     to a scalar observation. Smaller scores indicate better skill.
     
-    param obs: deterministic/ensemble observation with the shape [timesteps] / [ensemble, timesteps]
+    param obs: deterministic observation with the shape [timesteps]
     param pred: an ensemble of forecast with the shape [ensemble, timesteps]
     param data_structure: structure of data, must be "sequencial" or "spacial"
     
@@ -218,5 +218,128 @@ def CRPS(obs, pred, data_structure="sequencial"):
         raise IOError("The chosen data structure is not supported!")
     
     return CRPS_int, CRPS_mean
+
+def CRPSprob(obs, pred, data_structure="sequencial"):
+    """
+    Calculate the continuous ranked probability score (CRPS) for a set of
+    explicit forecast realizations.
+    
+    The CRPSprob compares the empirical distribution of an ensemble forecast
+    to an "ensemble" of "observation". Such request is always posted by an
+    assessment of an ensemble forecast against another ensemble of simulation,
+    which is in general known as pseudo observation. Smaller scores indicate
+    better skill.
+    
+    param obs: an ensemble observation with the shape  [ensemble, timesteps]
+    param pred: an ensemble of forecast with the shape [ensemble, timesteps]
+    param data_structure: structure of data, must be "sequencial" or "spacial"
+    
+    CRPS is defined for one-dimensional random variables with a probability
+    density $p(x)$,
+    
+    .. math::
+        CRPS(F, x) = \int_z (F_z(z) - F_x(z))^2 dz
         
+    where $F(x) = \int_{z \leq x} p(z) dz$ is the cumulative distribution
+    function (CDF) of the forecast distribution $F_z$ and the pseudo observation.
+    
+    This function calculates CRPS efficiently using the empirical CDF:
+    http://en.wikipedia.org/wiki/Empirical_distribution_function
+    """
+    if data_structure == "sequencial":
+        #print("Input timeseries")
+        ens_pred, t = pred.shape
+        ens_obs, t = obs.shape
+        # sort the forecast matrix following the ensemble axis
+        pred_sort = np.sort(pred, axis=0)
+        obs_sort = np.sort(obs, axis=0)
+        # compute the unit CDF for both
+        pred_cdf_unit = np.arange(1,ens_pred+1,1)
+        obs_cdf_unit = np.arange(1,ens_obs+1,1)
+        pred_cdf = np.repeat(pred_cdf_unit[:,np.newaxis], t, 1) * 1.0 / ens_pred
+        obs_cdf = np.repeat(obs_cdf_unit[:,np.newaxis], t, 1) * 1.0 / ens_obs
+        # computation of observation CDF multiplied by step length
+        dx = np.zeros(obs.shape,dtype=float)
+        dx[1:,:] = obs_sort[1:,:] - obs_sort[:-1,:]
+        obs_cdf_dx = obs_cdf * dx
+        # using a fake dynamic "Heaviside function" to compute the difference between 2 cdf
+        # and take the integral
+        CRPS_int = np.zeros(t,dtype=float)
+        for i in range(ens_pred-1):
+            H = np.zeros(obs.shape,dtype=int)
+            # initialize H of last timestep
+            if i == 0:
+                H_laststep = np.zeros(H.shape,dtype=int)
+            # take the threshold value for integration, first step is skipped due to dz
+            # we take the integral based on slice of forecast
+            pred_cri = pred_sort[i+1,:]
+            # calculate Heaviside function
+            # keep all the values from observation that below the threshold
+            pred_h = np.repeat(pred_cri[np.newaxis,:], ens_obs, 0)
+            H[pred_h>obs_sort] = 1.0
+            # calculate dz
+            pred_dz = pred_sort[i+1,:] - pred_sort[i,:]
+            # calculate CRPS
+            pred_cdf_dz = pred_cdf[i+1,:] * pred_dz
+            obs_cdf_sum = np.sum(obs_cdf_dx[:] * H - obs_cdf_dx[:] * H_laststep, 0)
+            CRPS = (pred_cdf_dz - obs_cdf_sum) ** 2 / pred_dz # normalized by pred_dz as it is included in the bracket
+            # update H for the last time step
+            H_laststep[:] = H[:]
+            # take the sum of CRPS
+            CRPS_int += CRPS
+        # take the mean of CRPS
+        CRPS_mean = np.mean(CRPS_int)
         
+    elif data_structure == "spacial":
+        #print("Input temporal-spatial sequence")
+        ens_pred, t, y, x = pred.shape
+        ens_obs, t, y, x = obs.shape
+        # sort the forecast matrix following the ensemble axis
+        pred_sort = np.sort(pred, axis=0)
+        obs_sort = np.sort(obs, axis=0)
+        # compute the unit CDF for both
+        pred_cdf_unit = np.arange(1,ens_pred+1,1)
+        obs_cdf_unit = np.arange(1,ens_obs+1,1)
+        
+        pred_cdf_2D = np.repeat(pred_cdf_unit[:,np.newaxis], t, 1) * 1.0 / ens_pred
+        pred_cdf_3D = np.repeat(pred_cdf_2D[:,:,np.newaxis], y, 2)
+        pred_cdf = np.repeat(pred_cdf_3D[:,:,:,np.newaxis], x, 3)
+        
+        obs_cdf_2D = np.repeat(obs_cdf_unit[:,np.newaxis], t, 1) * 1.0 / ens_obs
+        obs_cdf_3D = np.repeat(obs_cdf_2D[:,:,np.newaxis], y, 2)
+        obs_cdf = np.repeat(obs_cdf_3D[:,:,:,np.newaxis], x, 3)
+        # computation of observation CDF multiplied by step length
+        dx = np.zeros(obs.shape,dtype=float)
+        dx[1:,:,:,:] = obs_sort[1:,:,:,:] - obs_sort[:-1,:,:,:]
+        obs_cdf_dx = obs_cdf * dx
+        # using a fake dynamic "Heaviside function" to compute the difference between 2 cdf
+        # and take the integral
+        CRPS_int = np.zeros((t, y, x),dtype=float)
+        for i in range(ens_pred-1):
+            H = np.zeros(obs.shape,dtype=int)
+            # initialize H of last timestep
+            if i == 0:
+                H_laststep = np.zeros(H.shape,dtype=int)  
+            # take the threshold value for integration, first step is skipped due to dz
+            # we take the integral based on slice of forecast
+            pred_cri = pred_sort[i+1,:,:,:]
+            # calculate Heaviside function
+            # keep all the values from observation that below the threshold
+            pred_h = np.repeat(pred_cri[np.newaxis,:,:,:], ens_obs, 0)
+            H[pred_h>obs_sort] = 1.0            
+            # calculate dz
+            pred_dz = pred_sort[i+1,:,:,:] - pred_sort[i,:,:,:]
+            # calculate CRPS
+            pred_cdf_dz = pred_cdf[i+1,:,:,:] * pred_dz
+            obs_cdf_sum = np.sum(obs_cdf_dx[:] * H - obs_cdf_dx[:] * H_laststep, 0)
+            CRPS = (pred_cdf_dz - obs_cdf_sum) ** 2 / pred_dz # normalized by pred_dz as it is included in the bracket
+            # update H for the last time step
+            H_laststep[:] = H[:]
+            # take the sum of CRPS
+            CRPS_int += CRPS
+        # take the mean of CRPS
+        CRPS_mean = np.mean(CRPS_int)
+    else:
+        raise IOError("The chosen data structure is not supported!")
+    
+    return CRPS_int, CRPS_mean            
