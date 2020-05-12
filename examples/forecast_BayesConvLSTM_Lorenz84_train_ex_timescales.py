@@ -191,9 +191,9 @@ if __name__=="__main__":
     else:
         if timescales == "seasonal":
             win_size = 18
-        if timescales == "annual":
+        elif timescales == "annual":
             win_size = 73
-        if timescales == "interannual":
+        elif timescales == "interannual":
             win_size = 365
         elif timescales == "decadal":
             win_size = 730
