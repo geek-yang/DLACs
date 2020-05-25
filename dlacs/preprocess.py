@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Statistical Operator for Climate Data
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2018.07.26
-Last Update     : 2020.03.17
+Last Update     : 2020.05.17
 Contributor     :
 Description     : This module provides several methods to perform statistical
                   analysis on MET and all kinds of fields.
@@ -501,8 +501,7 @@ class operator:
         max_value = np.amax(series)
         min_value = np.amin(series)
         series_out = np.zeros(series.shape,dtype=float)
-        for i in np.arange(len(series)):
-            series_out[i] = (series[i] - min_value)/(max_value - min_value)
+        series_out[:] = (series[:] - min_value)/(max_value - min_value)
         
         return series_out
     
@@ -514,8 +513,7 @@ class operator:
         max_value = np.amax(series_ori)
         min_value = np.amin(series_ori)
         series_out = np.zeros(series_norm.shape,dtype=float)
-        for i in np.arange(len(series_norm)):
-            series_out[i] = series_norm[i]*(max_value - min_value) + min_value
+        series_out[:] = series_norm[:]*(max_value - min_value) + min_value
             
         return series_out
             
