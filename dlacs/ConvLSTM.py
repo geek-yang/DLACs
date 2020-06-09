@@ -5,7 +5,7 @@ Function        : Convolutional LSTM for one step prediction
 prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.05.21
-Last Update     : 2019.06.21
+Last Update     : 2020.06.09
 Contributor     :
 Description     : This module provides several methods to perform deep learning
                   on climate data. It is designed for weather/climate prediction with
@@ -29,12 +29,15 @@ from torch.autograd import Variable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class ConvLSTMCell(nn.Module):
-    def __init__(self, input_channels, hidden_channels, kernel_size):
+    def __init__(self, input_channels, hidden_channels, kernel_size,
+                 weight_dict = None, cell_index = None):
         """
         Build convolutional cell for ConvLSTM.
         param input_channels: number of channels (variables) from input fields
         param hidden_channels: number of channels inside hidden layers, the dimension correponds to the output size
         param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
+        param weight_dict: weight matrix for the initialization of mu (mean)
+        param cell_index: index of created BayesConvLSTM cell
         """
         super(ConvLSTMCell, self).__init__()
 
@@ -44,7 +47,11 @@ class ConvLSTMCell(nn.Module):
         self.hidden_channels = hidden_channels
         self.kernel_size = kernel_size
         #self.num_features = 4
-
+        
+        # inherit weight matrix
+        self.weight_dict = weight_dict
+        self.cell_index = cell_index
+        
         self.padding = int((kernel_size - 1) / 2) # make sure the output size remains the same as input
         # input shape of nn.Conv2d (input_channels,out_channels,kernel_size, stride, padding)
         # kernal_size and stride can be tuples, indicating non-square filter / uneven stride
@@ -60,6 +67,23 @@ class ConvLSTMCell(nn.Module):
         self.Wci = None
         self.Wcf = None
         self.Wco = None
+        
+        if self.weight_dict is not None:
+            # weight
+            self.Wxi.weight.data = self.weight_dict['cell{}.Wxi.weight'.format(self.cell_index)].data
+            self.Whi.weight.data = self.weight_dict['cell{}.Whi.weight'.format(self.cell_index)].data
+            self.Wxf.weight.data = self.weight_dict['cell{}.Wxf.weight'.format(self.cell_index)].data
+            self.Whf.weight.data = self.weight_dict['cell{}.Whf.weight'.format(self.cell_index)].data
+            self.Wxc.weight.data = self.weight_dict['cell{}.Wxc.weight'.format(self.cell_index)].data
+            self.Whc.weight.data = self.weight_dict['cell{}.Whc.weight'.format(self.cell_index)].data
+            self.Wxo.weight.data = self.weight_dict['cell{}.Wxo.weight'.format(self.cell_index)].data
+            self.Who.weight.data = self.weight_dict['cell{}.Who.weight'.format(self.cell_index)].data
+            
+            # bias
+            self.Wxi.bias.data = self.weight_dict['cell{}.Wxi.bias'.format(self.cell_index)].data
+            self.Wxf.bias.data = self.weight_dict['cell{}.Wxf.bias'.format(self.cell_index)].data
+            self.Wxc.bias.data = self.weight_dict['cell{}.Wxc.bias'.format(self.cell_index)].data
+            self.Wxo.bias.data = self.weight_dict['cell{}.Wxo.bias'.format(self.cell_index)].data            
 
     def forward(self, x, h, c):
         ci = torch.sigmoid(self.Wxi(x) + self.Whi(h) + c * self.Wci)
@@ -92,7 +116,7 @@ class ConvLSTM(nn.Module):
     """
     # input_channels corresponds to the first input feature map
     # hidden state is a list of succeeding lstm layers.
-    def __init__(self, input_channels, hidden_channels, kernel_size):
+    def __init__(self, input_channels, hidden_channels, kernel_size, weight_dict = None):
         super(ConvLSTM, self).__init__()
         self.input_channels = [input_channels] + hidden_channels
         self.hidden_channels = hidden_channels
@@ -103,7 +127,11 @@ class ConvLSTM(nn.Module):
         self._all_layers = []
         for i in range(self.num_layers):
             name = 'cell{}'.format(i)
-            cell = ConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
+            if weight_dict is None:
+                cell = ConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
+            else:
+                cell = ConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size,
+                                   weight_dict, i)
             setattr(self, name, cell)
             self._all_layers.append(cell)        
 
@@ -119,7 +147,7 @@ class ConvLSTM(nn.Module):
             # all cells are initialized in the first step
             name = 'cell{}'.format(i)
             if timestep == 0:
-                print('Initialization')
+                #print('Initialization')
                 bsize, _, height, width = x.size()
                 (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
                                                          shape=(height, width))
