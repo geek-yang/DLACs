@@ -1,16 +1,40 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3722946.svg)](https://doi.org/10.5281/zenodo.3722946)
 # DLACs :crystal_ball:
-**Deep Learning Architecture for Climate science**, in short as **DLACs**, is a python library designed to implement deep learning algorisms to climate data for weather and climate prediction. Deep learning techniques to deal with spatial-temporal sequences, namely the Convolutional Long Short Term Memory neural netwroks (**ConvLSTM**), are implemented in this package. A probabilistic version of the structure is also employed, with an easy shift from ConvLSTM to Bayesian ConvLSTM (**BayesConvLSTM**). <br/> Two ways of realization of the Bayesian deep learning are addressed here, which are Bayes by Backprop (Blundell et. al. 2015; Shridhar et. al. 2019) and Bayesian deep learning with dropout (Gal and Ghahramani 2016).  
+**Deep Learning Architecture for Climate science**, in short as **DLACs**, is a python library designed to implement deep learning algorisms to climate data for weather and climate prediction. Deep learning techniques to deal with spatial-temporal sequences, namely the Convolutional Long Short Term Memory neural netwroks (**ConvLSTM**), are implemented in this package. A probabilistic version of the structure is also employed, with an easy shift from ConvLSTM to Bayesian ConvLSTM (**BayesConvLSTM**). <br/> 
+
+Two types BayesConvLSTM are addressed here, which are BayesConvLSTM with variational inference (Blundell et. al. 2015; Shridhar et. al. 2019) and BayesConvLSTM by Bernoulli approximation with dropout (Gal and Ghahramani 2016).<br>
 
 The module is designed to perform convolutional and recurrent operatiaons on structured climate data. It is built on pytorch.<br/>
 
 ## Function :computer:
-Two kinds deep neural networks structures are included by the package:
-* Convolutional Long Short Term Memory neural netwroks <br>
-* Bayesian Convolutional Long Short Term Memory neural netwroks <br>
+Two kinds deep neural networks structures are included by the package:<br>
+* Convolutional Long Short Term Memory neural netwroks <br/>
+* Bayesian Convolutional Long Short Term Memory neural netwroks <br/>
+
+Two types of BayesConvLSTM are implemented here: BayesConvLSTM with variational inference and BayesConvLSTM approximated by Bernoulli distribution. The major differences are their functionality and the ways of training. BayesConvLSTM with variational inference is train by Bayes by Backprop (Blundell et. al. 2015; Shridhar et. al. 2019). BayesConvLSTM approximated by Bernoulli distribution is trained directly by back-propagation.<br/>
+
+## Structure :file_folder:
+Folder structure of the repositary:<br>
+* `dlacs` Main components of DLACs
+* `examples` Including jupyter notebooks showing how to use each function in DLACs
+* `init` Sample ConvLSTM neural network used to initialize BayesConvLSTM
+* `models` Examples of trained BayesConvLSTM neural networks
+* `tests` Unit testing, functional testing and integration testing shown in jupyter notebooks 
+
+## Modules :floppy_disk:
+Directory structure:<br>
+* `ConvLSTM` Contains ConvLSTM layer and the forward module.
+* `BayesConvLSTM` Contains BayesConvLSTM layer and the forward module of BayesConvLSTM with variational inference.
+* `BayesConvLSTMBinary` Contains BayesConvLSTM layer and the forward module of BayesConvLSTM approximated by Bernoulli distribution.
+* `function` Includes loss functions and distributions used by BayesConvLSTM.
+* `metric` Scoring system to evaluate the performance of training.
+* `preprocess` Functions to preprocess the input fields, like filtering, normalization, etc.
+* `regrid` Moduels for geoscience / climate data regridding.
+* `saveNetCDF` Modules to save the output in netCDF format.
+* `visual` Visualization components for postprocessing and plotting.
 
 ## Dependency :books:
-DLACs is tested on python 3.6 and has the following dependencies:
+DLACs is tested on python 3.6 and has the following dependencies:<br>
 * numpy
 * matplotlib
 * netCDF4
@@ -19,13 +43,9 @@ DLACs is tested on python 3.6 and has the following dependencies:
 * cartopy
 * torch
 
-## Modules :floppy_disk:
-Directory structure:
-* `ConvLSTM` Contains ConvLSTM layer and the forward module.
-* `BayesConvLSTM` Contains BayesConvLSTM layer and the forward module.
-* `example` Examples of how to implement the network structures in this library.
-* `models` Examples of trained models.
-* `tests` Includes unit testing, functional testing and integration testing.
+## Configuration
+Clone the repositary and add the repositary folder to your python system path, or just go to the repositary folder and run the following command after downloading:<br>
+`python setup.py install`
 
 ## Cite our work :gift_heart:
 DOI:10.5281/zenodo.3722946
