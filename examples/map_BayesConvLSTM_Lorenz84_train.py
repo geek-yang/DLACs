@@ -3,9 +3,9 @@
 Copyright Netherlands eScience Center
 Function     : Forecast Lorenz 84 model - Train BayesConvLSTM model
 Author       : Yang Liu
-First Built  : 2020.03.09
-Last Update  : 2020.04.12
-Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
+First Built  : 2020.05.19
+Last Update  : 2020.05.19
+Library     : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Lorenz 84 model using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
                We use Pytorch as the deep learning framework.
@@ -78,7 +78,7 @@ output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
 #########                             main                               ########
 #################################################################################
 # set up logging files
-logging.basicConfig(filename = os.path.join(output_path,'logFile_Lorenz84_train.log'),
+logging.basicConfig(filename = os.path.join(output_path,'logFile_Lorenz84_train_AA.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger('matplotlib.font_manager').disabled = True
@@ -95,45 +95,74 @@ if __name__=="__main__":
     z_init = 1.0 # strength of the sine phases of a chain of superposedwaves (large scale eddies)
     F = 8.0 # thermal forcing term
     G = 1.0 # thermal forcing term
+    epsilon = 0.4 # intensity of periodic forcing
     a = 0.25 # stiffness factor for westerly wind x
     b = 4.0 # advection strength of the waves by the westerly current
+
+    # AA influence
+    # assuming the equator-pole temperature difference is 24 deg (Avg)
+    # assuming the AA effect causes the Arctic temperature to increase by 1.5 deg (Avg)
+    # assuming the temperature increase in summer is a quarter of that in winter due to AA
+    # assumption made based on the paper
+    # Screen, J., Simmonds, I. The central role of diminishing sea ice in recent Arctic temperature amplification.
+    #  Nature 464, 1334–1337 (2010). https://doi.org/10.1038/nature09051
+    alpha = epsilon * (1.5 / 24)
+    beta = alpha / 4
     
     # assuming the damping time for the waves is 5 days (Lorens 1984)
     dt = 0.0333 # 1/30 unit of time unit (5 days)
     num_steps = 1500
     # cut-off point of initialization period
-    cut_off = 300
+    cut_off = 0
     
     logging.info("#####################################")
     logging.info("Summary of Lorenz 84 model")
     logging.info("x = 1.0  y = 1.0  z = 1.0")
     logging.info("F = 8.0 G = 1.0 a = 0.25 b = 4.0")
+    logging.info("epsilon = 0.4")
     logging.info("unit time step 0.0333 (~5days)")
-    logging.info("series length 1500 steps")
-    logging.info("cut-off length 300 steps")    
+    logging.info("series length {} steps".format(num_steps))
+    logging.info("cut-off length 0 steps")    
     logging.info("#####################################")
     #################################################################################
-    ###########                     Lorens 84 model                       ###########
-    #################################################################################    
-    def lorenz84(x, y, z, a = 0.25, b = 4.0, F = 8.0, G = 1.0):
+    ###########            Lorens 84 model + periodic forcing             ###########
+    #################################################################################
+    def lorenz84_AA(x, y, z, t, a = 0.25, b = 4.0, F = 8.0, G = 1.0, epsilon = 0.4, alpha = 0.04, beta = 0.01):
         """
-        Solver of Lorens-84 model.
+        Solver of Lorens-84 model with periodic external forcing and AA effect.
+        To emulate the AA influence, which cause reduced temperature graident in both summer
+        and winter, an extra term is included for the symmetric forcing term.
+        
         param x, y, z: location in a 3D space
         param a, b, F, G: constants and forcing
+        
+        The model is designed with a reference to the paper:
+        Broer, H., Simó, C., & Vitolo, R. (2002). Bifurcations and strange
+        attractors in the Lorenz-84 climate model with seasonal forcing. Nonlinearity, 15(4), 1205.
+        
+        Song, Y., Yu, Y., & Wang, H. (2011, October). The stability and chaos analysis of the
+        Lorenz-84 atmosphere model with seasonal forcing. In 2011 Fourth International Workshop
+        on Chaos-Fractals Theories and Applications (pp. 37-41). IEEE.
         """
-        dx = - y**2 - z**2 - a * x + a * F
-        dy = x * y - b * x * z - y + G
+        # each time step is ~ 5days, therefore the returning period are 365 / 5 = 73 times in a year
+        T = 73
+        omega = 2 * np.pi / T
+        AA_F = alpha * np.sin(2 * omega * t - np.pi / 2) - alpha - np.cos(omega * t) * beta
+        AA_G = alpha * np.cos(2 * omega * t) - alpha - np.sin(omega * t) * beta
+        dx = - y**2 - z**2 - a * x + a * F * (1 + epsilon * np.cos(omega * t) + AA_F)
+        dy = x * y - b * x * z - y + G * (1 + epsilon * np.sin(omega * t) + + AA_G)
         dz = b * x * y + x * z - z
         
-        return dx, dy, dz    
+        return dx, dy, dz
     #################################################################################
-    ###########                 Launch Lorenz 84 model                    ###########
+    ###########        Launch Lorenz 84 model with periodic forcing       ###########
     #################################################################################
     logging.info("Launch Lorenz 84 model")
     # Need one more for the initial values
     x = np.empty(num_steps)
     y = np.empty(num_steps)
     z = np.empty(num_steps)
+    t = 0.0
     
     # save initial values
     x[0] = x_init
@@ -143,17 +172,19 @@ if __name__=="__main__":
     # Step through "time", calculating the partial derivatives at the current point
     # and using them to estimate the next point
     for i in range(num_steps-1):
-        dx, dy, dz = lorenz84(x[i], y[i], z[i])
+        dx, dy, dz = lorenz84_AA(x[i], y[i], z[i], t, a, b ,F, G, epsilon, alpha, beta)
         x[i + 1] = x[i] + (dx * dt)
         y[i + 1] = y[i] + (dy * dt)
-        z[i + 1] = z[i] + (dz * dt)    
+        z[i + 1] = z[i] + (dz * dt)
+        t += dt   
     #################################################################################
     ###########        Prepare Lorenz 84 model output for learning        ###########
     #################################################################################
     # time series cut-off
-    x = x[cut_off:]
-    y = y[cut_off:]
-    z = z[cut_off:]
+    if cut_off:
+        x = x[cut_off:]
+        y = y[cut_off:]
+        z = z[cut_off:]
     print ('===================  normalize data  =====================')
     x_norm = dlacs.preprocess.operator.normalize(x)
     y_norm = dlacs.preprocess.operator.normalize(y)
@@ -181,7 +212,7 @@ if __name__=="__main__":
     batch_size = 1
     #num_layers = 1
     learning_rate = 0.01
-    num_epochs = 1000
+    num_epochs = 1500
     print ('*******************  testing data  *********************')
     test_len = 200
     print ('*******************  check the environment  *********************')
@@ -205,13 +236,11 @@ if __name__=="__main__":
     height = 1
     width = 1
     # initialize our model
-    #model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
-    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels,
-                                              kernel_size, cell_type="full").to(device)
+    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
     # use Evidence Lower Bound (ELBO) to quantify the loss
     ELBO = dlacs.function.ELBO(height*width)
     # penalty for kl
-    penalty_kl = 10
+    penalty_kl = 100
     # stochastic gradient descent
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     # Adam optimizer
@@ -291,7 +320,7 @@ if __name__=="__main__":
         
     # save the model
     # (recommended) save the model parameters only
-    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm_lorenz84.pkl'))
+    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm_lorenz84_AA.pkl'))
     # save the entire model
     # torch.save(model, os.path.join(output_path,'bayesconvlstm.pkl'))
     #################################################################################
@@ -305,7 +334,7 @@ if __name__=="__main__":
     plt.xlabel('Epoch')
     plt.ylabel('Error')
     plt.legend()
-    fig00.savefig(os.path.join(output_path,'BayesConvLSTM_pred_error_Lorenz84.png'),dpi=150)
+    fig00.savefig(os.path.join(output_path,'BayesConvLSTM_pred_error_Lorenz84_AA.png'),dpi=150)
     
     print ("*******************  Loss with time (log)  **********************")
     fig01 = plt.figure()
@@ -316,7 +345,7 @@ if __name__=="__main__":
     plt.ylabel('Log error')
     plt.legend()
     plt.show()
-    fig01.savefig(os.path.join(output_path,'BayesConvLSTM_pred_log_error_Lorenz84.png'),dpi=150)
+    fig01.savefig(os.path.join(output_path,'BayesConvLSTM_pred_log_error_Lorenz84_AA.png'),dpi=150)
     
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
     logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))
