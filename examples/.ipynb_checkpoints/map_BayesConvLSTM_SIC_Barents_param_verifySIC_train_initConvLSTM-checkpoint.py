@@ -5,7 +5,7 @@ Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at w
                Model initialize with ConvLSTM weight
 Author       : Yang Liu
 First Built  : 2020.03.09
-Last Update  : 2020.04.02
+Last Update  : 2020.07.02
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -32,7 +32,7 @@ import os
 from netCDF4 import Dataset
 # for pre-processing and machine learning
 import numpy as np
-import sklearn
+#import sklearn
 #import scipy
 import torch
 import torch.nn.functional
@@ -89,7 +89,7 @@ output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
 #########                             main                               ########
 #################################################################################
 # set up logging files
-logging.basicConfig(filename = os.path.join(output_path,'logFile_train_init.log'),
+logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_param_validSIC_train_init.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger('matplotlib.font_manager').disabled = True
@@ -133,8 +133,8 @@ if __name__=="__main__":
     # integrals from spatial fields cover the area from 20N - 90N (4D fields [year, month, lat, lon])
     # *************************************************************************************** #
     # SIC (ERA-Interim) - benckmark
-    SIC_ERAI = dataset_ERAI_fields_sic.variables['sic'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-    year_ERAI = dataset_ERAI_fields_sic.variables['year'][:-1]
+    SIC_ERAI = dataset_ERAI_fields_sic.variables['sic'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI = dataset_ERAI_fields_sic.variables['year'][:]
     week_ERAI = dataset_ERAI_fields_sic.variables['week'][:]
     latitude_ERAI = dataset_ERAI_fields_sic.variables['latitude'][:]
     longitude_ERAI = dataset_ERAI_fields_sic.variables['longitude'][:]
@@ -180,7 +180,7 @@ if __name__=="__main__":
     #year_SIV = dataset_PIOMASS_siv.variables['year'][:-1]
     # OHC (ORAS4)
     # from 1978 - 2017 (for interpolation) / from 90 N upto 40 N
-    OHC_300_ORAS4 = dataset_ORAS4_OHC.variables['OHC'][:-1,:,:67,:]/1000 # unit Peta Joule
+    OHC_300_ORAS4 = dataset_ORAS4_OHC.variables['OHC'][:,:,:67,:]/1000 # unit Peta Joule
     latitude_ORAS4 = dataset_ORAS4_OHC.variables['latitude'][:]
     longitude_ORAS4 = dataset_ORAS4_OHC.variables['longitude'][:]
     mask_OHC = np.ma.getmask(OHC_300_ORAS4[0,0,:,:])
@@ -310,7 +310,7 @@ if __name__=="__main__":
     sic_min = np.amin(sic_exp)
     print ('====================    A series of time (index)    ====================')
     _, yy, xx = sic_exp_norm.shape # get the lat lon dimension
-    year = np.arange(1979,2017,1)
+    year = np.arange(1979,2018,1)
     year_cycle = np.repeat(year,48)
     month_cycle = np.repeat(np.arange(1,13,1),4)
     month_cycle = np.tile(month_cycle,len(year)+1) # one extra repeat for lead time dependent prediction
@@ -348,9 +348,9 @@ if __name__=="__main__":
     num_epochs = 1500
     print ('*******************  cross validation and testing data  *********************')
     # take 10% data as cross-validation data
-    cross_valid_year = 4
+    cross_valid_year = 0
     # take 10% years as testing data
-    test_year = 4
+    test_year = 3
     # minibatch
     #iterations = 3 # training data divided into 3 sets
     print ('*******************  check the environment  *********************')
@@ -386,7 +386,7 @@ if __name__=="__main__":
     sequence_len, height, width = sic_exp_norm.shape
     # initialize our model
     model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size,
-                                               cell_type="full", weight_dict = weight_model_init).to(device)
+                                               cell_type="reduced", weight_dict = weight_model_init).to(device)
     #model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
     # use Evidence Lower Bound (ELBO) to quantify the loss
     ELBO = dlacs.function.ELBO(height*width)
@@ -395,7 +395,7 @@ if __name__=="__main__":
     #ELBO = dlacs.function.ELBO(height*width,loss_function=nn.CrossEntropyLoss(reduction='mean'))
     #ELBO = dlacs.function.ELBO(height*width,loss_function=nn.NLLLoss(reduction='mean'))
     # penalty for kl
-    penalty_kl = sequence_len
+    penalty_kl = sequence_len * 50
     # stochastic gradient descent
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     # Adam optimizer
@@ -479,7 +479,7 @@ if __name__=="__main__":
         
     # save the model
     # (recommended) save the model parameters only
-    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm_init.pkl'))
+    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm_sic_param_validSIC_init.pkl'))
     # save the entire model
     # torch.save(model, os.path.join(output_path,'bayesconvlstm.pkl'))
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
@@ -493,7 +493,7 @@ if __name__=="__main__":
     plt.xlabel('Epoch')
     plt.ylabel('Error')
     plt.legend()
-    fig00.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_pred_error_init.png'),dpi=200)
+    fig00.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_param_validSIC_pred_error_init.png'),dpi=200)
     
     print ("*******************  Loss with time (log)  **********************")
     fig01 = plt.figure()
@@ -504,4 +504,4 @@ if __name__=="__main__":
     plt.ylabel('Log error')
     plt.legend()
     plt.show()
-    fig01.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_pred_log_error_init.png'),dpi=200)
+    fig01.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_param_validSIC_pred_log_error_init.png'),dpi=200)

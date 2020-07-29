@@ -4,8 +4,8 @@ Copyright Netherlands eScience Center
 Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Train model
                Model initialize with ConvLSTM weight
 Author       : Yang Liu
-First Built  : 2020.03.09
-Last Update  : 2020.07.02
+First Built  : 2020.07.22
+Last Update  : 2020.07.22
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -89,7 +89,7 @@ output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
 #########                             main                               ########
 #################################################################################
 # set up logging files
-logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_param_validSIC_train_init.log'),
+logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_bestPrac_validAll_train_init.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger('matplotlib.font_manager').disabled = True
@@ -99,18 +99,18 @@ if __name__=="__main__":
     # weekly variables on ERAI grid
     dataset_ERAI_fields_sic = Dataset(os.path.join(datapath,
                                       'sic_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_slp = Dataset(os.path.join(datapath_ERAI,
-#                                       'slp_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath_ERAI,
-#                                       't2m_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
-#                                        'z500_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath_ERAI,
-#                                        'z850_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
-#                                        'uv10m_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_rad = Dataset(os.path.join(datapath_ERAI,
-#                                         'rad_flux_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_slp = Dataset(os.path.join(datapath_ERAI,
+                                       'slp_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath_ERAI,
+                                       't2m_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
+                                        'z500_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath_ERAI,
+                                       'z850_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
+                                       'uv10m_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_rad = Dataset(os.path.join(datapath_ERAI,
+                                        'rad_flux_weekly_erai_1979_2017.nc'))
     #dataset_PIOMASS_siv = Dataset(os.path.join(datapath_PIOMASS,
     #                             'siv_monthly_PIOMASS_1979_2017.nc'))
     # OHC interpolated on ERA-Interim grid
@@ -118,17 +118,17 @@ if __name__=="__main__":
                                 'ohc_monthly_oras2erai_1978_2017.nc'))
 #     dataset_index = Dataset(os.path.join(datapath_clim_index,
 #                             'index_climate_monthly_regress_1950_2017.nc'))
-    #dataset_ERAI_fields_flux = Dataset(os.path.join(datapath_ERAI_fields,
-    #                                  'surface_erai_monthly_regress_1979_2017_radiation.nc'))
+    dataset_ERAI_fields_flux = Dataset(os.path.join(datapath_ERAI_fields,
+                                      'surface_erai_monthly_regress_1979_2017_radiation.nc'))
     # mask
     dataset_ORAS4_mask = Dataset(os.path.join(datapath, 'mesh_mask.nc'))
     print ('*********************** extract variables *************************')
     #################################################################################
     #########                        data gallery                           #########
     #################################################################################
-    # we use time series from 1979 to 2016 (468 months in total)
-    # training data: 1979 - 2013
-    # validation: 2014 - 2016
+    # we use time series from 1979 to 2017 (480 months in total)
+    # training data: 1979 - 2014
+    # validation: 2015 - 2017
     # variables list:
     # integrals from spatial fields cover the area from 20N - 90N (4D fields [year, month, lat, lon])
     # *************************************************************************************** #
@@ -139,42 +139,42 @@ if __name__=="__main__":
     latitude_ERAI = dataset_ERAI_fields_sic.variables['latitude'][:]
     longitude_ERAI = dataset_ERAI_fields_sic.variables['longitude'][:]
     # T2M (ERA-Interim)
-#     T2M_ERAI = dataset_ERAI_fields_t2m.variables['t2m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_t2m = dataset_ERAI_fields_t2m.variables['year'][:-1]
-#     week_ERAI_t2m = dataset_ERAI_fields_t2m.variables['week'][:]
-#     latitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['latitude'][:]
-#     longitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['longitude'][:]
+    T2M_ERAI = dataset_ERAI_fields_t2m.variables['t2m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_t2m = dataset_ERAI_fields_t2m.variables['year'][:]
+    week_ERAI_t2m = dataset_ERAI_fields_t2m.variables['week'][:]
+    latitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['latitude'][:]
+    longitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['longitude'][:]
     # SLP (ERA-Interim)
-#     SLP_ERAI = dataset_ERAI_fields_slp.variables['slp'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_slp = dataset_ERAI_fields_slp.variables['year'][:-1]
-#     week_ERAI_slp = dataset_ERAI_fields_slp.variables['week'][:]
-#     latitude_ERAI_slp = dataset_ERAI_fields_slp.variables['latitude'][:]
-#     longitude_ERAI_slp = dataset_ERAI_fields_slp.variables['longitude'][:]
+    SLP_ERAI = dataset_ERAI_fields_slp.variables['slp'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_slp = dataset_ERAI_fields_slp.variables['year'][:]
+    week_ERAI_slp = dataset_ERAI_fields_slp.variables['week'][:]
+    latitude_ERAI_slp = dataset_ERAI_fields_slp.variables['latitude'][:]
+    longitude_ERAI_slp = dataset_ERAI_fields_slp.variables['longitude'][:]
     # Z500 (ERA-Interim)
-#     Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:-1]
-#     week_ERAI_z500 = dataset_ERAI_fields_z500.variables['week'][:]
-#     latitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['latitude'][:]
-#     longitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['longitude'][:]
+    Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:]
+    week_ERAI_z500 = dataset_ERAI_fields_z500.variables['week'][:]
+    latitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['latitude'][:]
+    longitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['longitude'][:]
     # Z850 (ERA-Interim)
-#     Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:-1]
-#     week_ERAI_z850 = dataset_ERAI_fields_z850.variables['week'][:]
-#     latitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['latitude'][:]
-#     longitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['longitude'][:]
+    Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:]
+    week_ERAI_z850 = dataset_ERAI_fields_z850.variables['week'][:]
+    latitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['latitude'][:]
+    longitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['longitude'][:]
     # UV10M (ERA-Interim)
-#     U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:-1]
-#     week_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['week'][:]
-#     latitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['latitude'][:]
-#     longitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['longitude'][:]
+    U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:]
+    week_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['week'][:]
+    latitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['latitude'][:]
+    longitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['longitude'][:]
     # SFlux (ERA-Interim)
-#     SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:-1]
-#     week_ERAI_SFlux = dataset_ERAI_fields_rad.variables['week'][:]
-#     latitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['latitude'][:]
-#     longitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['longitude'][:]
+    SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:]
+    week_ERAI_SFlux = dataset_ERAI_fields_rad.variables['week'][:]
+    latitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['latitude'][:]
+    longitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['longitude'][:]
     #SIV (PIOMASS)
     #SIV_PIOMASS = dataset_PIOMASS_siv.variables['SIV'][:-12]
     #year_SIV = dataset_PIOMASS_siv.variables['year'][:-1]
@@ -266,48 +266,64 @@ if __name__=="__main__":
     dy = np.pi * constant['R'] / 480
     # calculate the sea ice area
     SIC_ERAI_area = np.zeros(SIC_ERAI.shape, dtype=float)
-#     SFlux_ERAI_area = np.zeros(SFlux_ERAI.shape, dtype=float)
+    SFlux_ERAI_area = np.zeros(SFlux_ERAI.shape, dtype=float)
     for i in np.arange(len(latitude_ERAI[:])):
         # change the unit to terawatt
         SIC_ERAI_area[:,:,i,:] = SIC_ERAI[:,:,i,:]* dx[i] * dy / 1E+6 # unit km2
-#         SFlux_ERAI_area[:,:,i,:] = SFlux_ERAI[:,:,i,:]* dx[i] * dy / 1E+12 # unit TeraWatt
+        SFlux_ERAI_area[:,:,i,:] = SFlux_ERAI[:,:,i,:]* dx[i] * dy / 1E+12 # unit TeraWatt
     SIC_ERAI_area[SIC_ERAI_area<0] = 0 # switch the mask from -1 to 0
     print ('================  reshape input data into time series  =================')
     SIC_ERAI_area_series = dlacs.preprocess.operator.unfold(SIC_ERAI_area)
-#     T2M_ERAI_series = dlacs.preprocess.operator.unfold(T2M_ERAI)
-#     SLP_ERAI_series = dlacs.preprocess.operator.unfold(SLP_ERAI)
-#     Z500_ERAI_series = dlacs.preprocess.operator.unfold(Z500_ERAI)
-#     Z850_ERAI_series = dlacs.preprocess.operator.unfold(Z850_ERAI)
-#     U10M_ERAI_series = dlacs.preprocess.operator.unfold(U10M_ERAI)
-#     V10M_ERAI_series = dlacs.preprocess.operator.unfold(V10M_ERAI)
-#     SFlux_ERAI_area_series = dlacs.preprocess.operator.unfold(SFlux_ERAI_area)
+    T2M_ERAI_series = dlacs.preprocess.operator.unfold(T2M_ERAI)
+    SLP_ERAI_series = dlacs.preprocess.operator.unfold(SLP_ERAI)
+    Z500_ERAI_series = dlacs.preprocess.operator.unfold(Z500_ERAI)
+    Z850_ERAI_series = dlacs.preprocess.operator.unfold(Z850_ERAI)
+    U10M_ERAI_series = dlacs.preprocess.operator.unfold(U10M_ERAI)
+    V10M_ERAI_series = dlacs.preprocess.operator.unfold(V10M_ERAI)
+    SFlux_ERAI_area_series = dlacs.preprocess.operator.unfold(SFlux_ERAI_area)
     print ('******************  choose the fields from target region  *******************')
     # select land-sea mask
     sea_ice_mask_barents = sea_ice_mask_global[12:36,264:320]
     # select the area between greenland and ice land for instance 60-70 N / 44-18 W
     sic_exp = SIC_ERAI_area_series[:,12:36,264:320]
-#     t2m_exp = T2M_ERAI_series[:,12:36,264:320]
-#     slp_exp = SLP_ERAI_series[:,12:36,264:320]
-#     z500_exp = Z500_ERAI_series[:,12:36,264:320]
-#     z850_exp = Z850_ERAI_series[:,12:36,264:320]
-#     u10m_exp = U10M_ERAI_series[:,12:36,264:320]
-#     v10m_exp = V10M_ERAI_series[:,12:36,264:320]
-#     sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
+    t2m_exp = T2M_ERAI_series[:,12:36,264:320]
+    slp_exp = SLP_ERAI_series[:,12:36,264:320]
+    z500_exp = Z500_ERAI_series[:,12:36,264:320]
+    z850_exp = Z850_ERAI_series[:,12:36,264:320]
+    u10m_exp = U10M_ERAI_series[:,12:36,264:320]
+    v10m_exp = V10M_ERAI_series[:,12:36,264:320]
+    sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
     ohc_exp = OHC_300_ORAS4_weekly_series[:,12:36,264:320]
     print ('*******************  pre-processing  *********************')
     print ('=========================   normalize data   ===========================')
     sic_exp_norm = dlacs.preprocess.operator.normalize(sic_exp)
-#     t2m_exp_norm = deepclim.preprocess.operator.normalize(t2m_exp)
-#     slp_exp_norm = deepclim.preprocess.operator.normalize(slp_exp)
-#     z500_exp_norm = deepclim.preprocess.operator.normalize(z500_exp)
-#     z850_exp_norm = deepclim.preprocess.operator.normalize(z850_exp)
-#     u10m_exp_norm = deepclim.preprocess.operator.normalize(u10m_exp)
-#     v10m_exp_norm = deepclim.preprocess.operator.normalize(v10m_exp)
-#     sflux_exp_norm = deepclim.preprocess.operator.normalize(sflux_exp)
+    t2m_exp_norm = deepclim.preprocess.operator.normalize(t2m_exp)
+    slp_exp_norm = deepclim.preprocess.operator.normalize(slp_exp)
+    z500_exp_norm = deepclim.preprocess.operator.normalize(z500_exp)
+    z850_exp_norm = deepclim.preprocess.operator.normalize(z850_exp)
+    u10m_exp_norm = deepclim.preprocess.operator.normalize(u10m_exp)
+    v10m_exp_norm = deepclim.preprocess.operator.normalize(v10m_exp)
+    sflux_exp_norm = deepclim.preprocess.operator.normalize(sflux_exp)
     ohc_exp_norm = dlacs.preprocess.operator.normalize(ohc_exp)
     print('================  save the normalizing factor  =================')
     sic_max = np.amax(sic_exp)
     sic_min = np.amin(sic_exp)
+    ohc_max = np.amax(ohc_exp)
+    ohc_min = np.amin(ohc_exp)
+    t2m_max = np.amax(t2m_exp)
+    t2m_min = np.amin(t2m_exp)
+    slp_max = np.amax(slp_exp)
+    slp_min = np.amin(slp_exp)
+    z500_max = np.amax(z500_exp)
+    z500_min = np.amin(z500_exp)
+    z850_max = np.amax(z850_exp)
+    z850_min = np.amin(z850_exp)
+    u10m_max = np.amax(u10m_exp)
+    u10m_min = np.amin(u10m_exp)
+    v10m_max = np.amax(v10m_exp)
+    v10m_min = np.amin(v10m_exp)
+    sflux_max = np.amax(sflux_exp)
+    sflux_min = np.amin(sflux_exp)
     print ('====================    A series of time (index)    ====================')
     _, yy, xx = sic_exp_norm.shape # get the lat lon dimension
     year = np.arange(1979,2018,1)
@@ -330,14 +346,12 @@ if __name__=="__main__":
     #weight_loss = np.repeat(weight_month,4)
     #weight_loss = np.tile(weight_loss,len(year))
     logging.info("Data preprocessing complete!")
-    print ('*******************  parameter for check  *********************')
-    choice_exp_norm = ohc_exp_norm
     print ('*******************  create basic dimensions for tensor and network  *********************')
     # specifications of neural network
-    input_channels = 3
-    #hidden_channels = [3, 2, 1] # number of channels & hidden layers, the channels of last layer is the channels of output, too
+    input_channels = 10
+    hidden_channels = [10, 10, 9] # number of channels & hidden layers, the channels of last layer is the channels of output, too
     #hidden_channels = [3, 3, 3, 3, 2]
-    hidden_channels = [1]
+    #hidden_channels = [1]
     kernel_size = 3
     # here we input a sequence and predict the next step only
     #step = 1 # how many steps to predict ahead
@@ -369,7 +383,7 @@ if __name__=="__main__":
     # load model parameters
     model_init = dlacs.ConvLSTM.ConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
     model_init.load_state_dict(torch.load(os.path.join(init_path,
-                               'convlstm_era_sic_oras_ohc_Barents_hl_1_kernel_3_lr_0.01_epoch_500_validSIC_dict.pkl'), map_location=device))
+                               'convlstm_era_sic_t2m_slp_z500_z850_uv10m_sflux_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validAll.pkl'), map_location=device))
     # load entire model
     #model_init = torch.load(os.path.join(init_path, 'convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     print(model_init)
@@ -425,12 +439,27 @@ if __name__=="__main__":
             # create variables
             x_input = np.stack((sic_exp_norm[timestep,:,:],
                                 choice_exp_norm[timestep,:,:],
+                                t2m_exp_norm[timestep,:,:],
+                                slp_exp_norm[timestep,:,:],
+                                z500_exp_norm[timestep,:,:],
+                                z850_exp_norm[timestep,:,:],
+                                u10m_exp_norm[timestep,:,:],
+                                v10m_exp_norm[timestep,:,:],
+                                sflux_exp_norm[timestep,:,:],
                                 month_exp[timestep,:,:])) #vstack,hstack,dstack
             x_var = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width)).to(device)
             #################################################################################
             ########       create training tensor with multi-input dimension         ########
             #################################################################################
-            y_train_stack = sic_exp_norm[timestep+1,:,:] #vstack,hstack,dstack
+            y_train_stack = np.stack((sic_exp_norm[timestep+1,:,:],
+                                      ohc_exp_norm[timestep+1,:,:],
+                                      t2m_exp_norm[timestep+1,:,:],
+                                      slp_exp_norm[timestep+1,:,:],
+                                      z500_exp_norm[timestep+1,:,:],
+                                      z850_exp_norm[timestep+1,:,:],
+                                      u10m_exp_norm[timestep+1,:,:],
+                                      v10m_exp_norm[timestep+1,:,:],
+                                      sflux_exp_norm[timestep+1,:,:])) #vstack,hstack,dstack
             y_var = torch.autograd.Variable(torch.Tensor(y_train_stack).view(-1,hidden_channels[-1],height,width)).to(device)
             #################################################################################   
             # Forward pass
@@ -479,7 +508,7 @@ if __name__=="__main__":
         
     # save the model
     # (recommended) save the model parameters only
-    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm_sic_param_validSIC_init.pkl'))
+    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm_sic_bestPrac_validAll_init.pkl'))
     # save the entire model
     # torch.save(model, os.path.join(output_path,'bayesconvlstm.pkl'))
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
@@ -493,7 +522,7 @@ if __name__=="__main__":
     plt.xlabel('Epoch')
     plt.ylabel('Error')
     plt.legend()
-    fig00.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_param_validSIC_pred_error_init.png'),dpi=200)
+    fig00.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_bestPrac_validAll_pred_error_init.png'),dpi=200)
     
     print ("*******************  Loss with time (log)  **********************")
     fig01 = plt.figure()
@@ -504,4 +533,4 @@ if __name__=="__main__":
     plt.ylabel('Log error')
     plt.legend()
     plt.show()
-    fig01.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_param_validSIC_pred_log_error_init.png'),dpi=200)
+    fig01.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_bestPrac_validAll_pred_log_error_init.png'),dpi=200)
