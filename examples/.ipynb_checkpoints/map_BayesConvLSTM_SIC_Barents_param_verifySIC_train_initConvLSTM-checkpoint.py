@@ -345,7 +345,7 @@ if __name__=="__main__":
     batch_size = 1
     #num_layers = 1
     learning_rate = 0.01
-    num_epochs = 1500
+    num_epochs = 700
     print ('*******************  cross validation and testing data  *********************')
     # take 10% data as cross-validation data
     cross_valid_year = 0

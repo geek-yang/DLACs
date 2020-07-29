@@ -118,8 +118,8 @@ if __name__=="__main__":
                                 'ohc_monthly_oras2erai_1978_2017.nc'))
 #     dataset_index = Dataset(os.path.join(datapath_clim_index,
 #                             'index_climate_monthly_regress_1950_2017.nc'))
-    dataset_ERAI_fields_flux = Dataset(os.path.join(datapath_ERAI_fields,
-                                      'surface_erai_monthly_regress_1979_2017_radiation.nc'))
+#    dataset_ERAI_fields_flux = Dataset(os.path.join(datapath_ERAI_fields,
+#                                      'surface_erai_monthly_regress_1979_2017_radiation.nc'))
     # mask
     dataset_ORAS4_mask = Dataset(os.path.join(datapath, 'mesh_mask.nc'))
     print ('*********************** extract variables *************************')
@@ -297,13 +297,13 @@ if __name__=="__main__":
     print ('*******************  pre-processing  *********************')
     print ('=========================   normalize data   ===========================')
     sic_exp_norm = dlacs.preprocess.operator.normalize(sic_exp)
-    t2m_exp_norm = deepclim.preprocess.operator.normalize(t2m_exp)
-    slp_exp_norm = deepclim.preprocess.operator.normalize(slp_exp)
-    z500_exp_norm = deepclim.preprocess.operator.normalize(z500_exp)
-    z850_exp_norm = deepclim.preprocess.operator.normalize(z850_exp)
-    u10m_exp_norm = deepclim.preprocess.operator.normalize(u10m_exp)
-    v10m_exp_norm = deepclim.preprocess.operator.normalize(v10m_exp)
-    sflux_exp_norm = deepclim.preprocess.operator.normalize(sflux_exp)
+    t2m_exp_norm = dlacs.preprocess.operator.normalize(t2m_exp)
+    slp_exp_norm = dlacs.preprocess.operator.normalize(slp_exp)
+    z500_exp_norm = dlacs.preprocess.operator.normalize(z500_exp)
+    z850_exp_norm = dlacs.preprocess.operator.normalize(z850_exp)
+    u10m_exp_norm = dlacs.preprocess.operator.normalize(u10m_exp)
+    v10m_exp_norm = dlacs.preprocess.operator.normalize(v10m_exp)
+    sflux_exp_norm = dlacs.preprocess.operator.normalize(sflux_exp)
     ohc_exp_norm = dlacs.preprocess.operator.normalize(ohc_exp)
     print('================  save the normalizing factor  =================')
     sic_max = np.amax(sic_exp)
@@ -359,7 +359,7 @@ if __name__=="__main__":
     batch_size = 1
     #num_layers = 1
     learning_rate = 0.01
-    num_epochs = 1500
+    num_epochs = 700
     print ('*******************  cross validation and testing data  *********************')
     # take 10% data as cross-validation data
     cross_valid_year = 0
@@ -438,7 +438,7 @@ if __name__=="__main__":
             #################################################################################
             # create variables
             x_input = np.stack((sic_exp_norm[timestep,:,:],
-                                choice_exp_norm[timestep,:,:],
+                                ohc_exp_norm[timestep,:,:],
                                 t2m_exp_norm[timestep,:,:],
                                 slp_exp_norm[timestep,:,:],
                                 z500_exp_norm[timestep,:,:],

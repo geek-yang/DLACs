@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Train model
-               Model initialize with ConvLSTM weight
+Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Load and reuse model
 Author       : Yang Liu
 First Built  : 2020.03.09
-Last Update  : 2020.07.02
+Last Update  : 2020.07.22
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -41,7 +40,6 @@ import torch.nn.functional
 #sys.path.append("C:\\Users\\nosta\\ML4Climate\\Scripts\\DLACs")
 sys.path.append("../")
 import dlacs
-import dlacs.ConvLSTM
 import dlacs.BayesConvLSTM
 import dlacs.preprocess
 import dlacs.function
@@ -82,35 +80,33 @@ start_time = tttt.time()
 # **ORAS4**       1958 - 2014 (ECMWF)
 # please specify data path
 datapath = '/projects/0/blueactn/dataBayes'
-# path of initialization weight
-init_path = '/home/lwc16308/BayesArctic/DLACs/init/'
 output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
+model_name = 'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_700_validAll.pkl'
 ################################################################################# 
 #########                             main                               ########
 #################################################################################
 # set up logging files
-logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_param_validSIC_train_init.log'),
+logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_param_validAll_pred_init.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logging.getLogger('matplotlib.font_manager').disabled = True
 
 if __name__=="__main__":
     print ('*********************** get the key to the datasets *************************')
     # weekly variables on ERAI grid
     dataset_ERAI_fields_sic = Dataset(os.path.join(datapath,
                                       'sic_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_slp = Dataset(os.path.join(datapath_ERAI,
-#                                       'slp_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath_ERAI,
-#                                       't2m_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
-#                                        'z500_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath_ERAI,
-#                                        'z850_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
-#                                        'uv10m_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_rad = Dataset(os.path.join(datapath_ERAI,
-#                                         'rad_flux_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_slp = Dataset(os.path.join(datapath_ERAI,
+                                      'slp_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath_ERAI,
+                                      't2m_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
+                                       'z500_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath_ERAI,
+                                       'z850_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
+                                       'uv10m_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_rad = Dataset(os.path.join(datapath_ERAI,
+                                        'rad_flux_weekly_erai_1979_2017.nc'))
     #dataset_PIOMASS_siv = Dataset(os.path.join(datapath_PIOMASS,
     #                             'siv_monthly_PIOMASS_1979_2017.nc'))
     # OHC interpolated on ERA-Interim grid
@@ -139,39 +135,39 @@ if __name__=="__main__":
     latitude_ERAI = dataset_ERAI_fields_sic.variables['latitude'][:]
     longitude_ERAI = dataset_ERAI_fields_sic.variables['longitude'][:]
     # T2M (ERA-Interim)
-#     T2M_ERAI = dataset_ERAI_fields_t2m.variables['t2m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_t2m = dataset_ERAI_fields_t2m.variables['year'][:-1]
-#     week_ERAI_t2m = dataset_ERAI_fields_t2m.variables['week'][:]
-#     latitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['latitude'][:]
-#     longitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['longitude'][:]
+    T2M_ERAI = dataset_ERAI_fields_t2m.variables['t2m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_t2m = dataset_ERAI_fields_t2m.variables['year'][:]
+    week_ERAI_t2m = dataset_ERAI_fields_t2m.variables['week'][:]
+    latitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['latitude'][:]
+    longitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['longitude'][:]
     # SLP (ERA-Interim)
-#     SLP_ERAI = dataset_ERAI_fields_slp.variables['slp'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_slp = dataset_ERAI_fields_slp.variables['year'][:-1]
-#     week_ERAI_slp = dataset_ERAI_fields_slp.variables['week'][:]
-#     latitude_ERAI_slp = dataset_ERAI_fields_slp.variables['latitude'][:]
+    SLP_ERAI = dataset_ERAI_fields_slp.variables['slp'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_slp = dataset_ERAI_fields_slp.variables['year'][:]
+    week_ERAI_slp = dataset_ERAI_fields_slp.variables['week'][:]
+    latitude_ERAI_slp = dataset_ERAI_fields_slp.variables['latitude'][:]
 #     longitude_ERAI_slp = dataset_ERAI_fields_slp.variables['longitude'][:]
     # Z500 (ERA-Interim)
-#     Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:-1]
+#     Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:]
 #     week_ERAI_z500 = dataset_ERAI_fields_z500.variables['week'][:]
 #     latitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['latitude'][:]
 #     longitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['longitude'][:]
     # Z850 (ERA-Interim)
-#     Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:-1]
+#     Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:]
 #     week_ERAI_z850 = dataset_ERAI_fields_z850.variables['week'][:]
 #     latitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['latitude'][:]
 #     longitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['longitude'][:]
     # UV10M (ERA-Interim)
-#     U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:-1]
+#     U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:]
 #     week_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['week'][:]
 #     latitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['latitude'][:]
 #     longitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['longitude'][:]
     # SFlux (ERA-Interim)
-#     SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:-1]
+#     SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:]
 #     week_ERAI_SFlux = dataset_ERAI_fields_rad.variables['week'][:]
 #     latitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['latitude'][:]
 #     longitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['longitude'][:]
@@ -294,6 +290,8 @@ if __name__=="__main__":
 #     v10m_exp = V10M_ERAI_series[:,12:36,264:320]
 #     sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
     ohc_exp = OHC_300_ORAS4_weekly_series[:,12:36,264:320]
+    #print(longitude_ERAI[180:216])
+    #print(sic_exp[:])
     print ('*******************  pre-processing  *********************')
     print ('=========================   normalize data   ===========================')
     sic_exp_norm = dlacs.preprocess.operator.normalize(sic_exp)
@@ -335,9 +333,9 @@ if __name__=="__main__":
     print ('*******************  create basic dimensions for tensor and network  *********************')
     # specifications of neural network
     input_channels = 3
-    #hidden_channels = [3, 2, 1] # number of channels & hidden layers, the channels of last layer is the channels of output, too
+    hidden_channels = [3, 2, 1] # number of channels & hidden layers, the channels of last layer is the channels of output, too
     #hidden_channels = [3, 3, 3, 3, 2]
-    hidden_channels = [1]
+    #hidden_channels = [2]
     kernel_size = 3
     # here we input a sequence and predict the next step only
     #step = 1 # how many steps to predict ahead
@@ -358,7 +356,6 @@ if __name__=="__main__":
     # check if CUDA is available
     use_cuda = torch.cuda.is_available()
     print("Is CUDA available? {}".format(use_cuda))
-    logging.info("Is CUDA available? {}".format(use_cuda))
     # CUDA settings torch.__version__ must > 0.4
     # !!! This is important for the model!!! The first option is gpu
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -367,141 +364,85 @@ if __name__=="__main__":
     ##################################################################################
     print ('*******************  load exsited LSTM model  *********************')
     # load model parameters
-    model_init = dlacs.ConvLSTM.ConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
-    model_init.load_state_dict(torch.load(os.path.join(init_path,
-                               'convlstm_era_sic_oras_ohc_Barents_hl_1_kernel_3_lr_0.01_epoch_500_validSIC_dict.pkl'), map_location=device))
+    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
+    model.load_state_dict(torch.load(os.path.join(output_path,model_name), map_location=device))
     # load entire model
-    #model_init = torch.load(os.path.join(init_path, 'convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
-    print(model_init)
-    print ('*******************  extract the weight from ConvLSTM  *********************')
-    weight_model_init = {}
-    for name, param in model_init.named_parameters():
-        weight_model_init['{}'.format(name)] = param.data
-    
-    print ('*******************  train BayesConvLSTM  *********************')
-    print ('The model is designed to make many to one prediction.')
-    print ('A series of multi-chanel variables will be input to the model.')
-    print ('The model learns by verifying the output at each timestep.')
-    # check the sequence length
-    sequence_len, height, width = sic_exp_norm.shape
-    # initialize our model
-    model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size,
-                                               cell_type="reduced", weight_dict = weight_model_init).to(device)
-    #model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
-    # use Evidence Lower Bound (ELBO) to quantify the loss
-    ELBO = dlacs.function.ELBO(height*width)
-    # for classification, target must be integers (label)
-    #ELBO = dlacs.function.ELBO(height*width,loss_function=torch.nn.KLDivLoss())
-    #ELBO = dlacs.function.ELBO(height*width,loss_function=nn.CrossEntropyLoss(reduction='mean'))
-    #ELBO = dlacs.function.ELBO(height*width,loss_function=nn.NLLLoss(reduction='mean'))
-    # penalty for kl
-    penalty_kl = sequence_len * 50
-    # stochastic gradient descent
-    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
-    # Adam optimizer
-    optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    # L2 regularization
-    #optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.01)
+    #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     print(model)
-    print(ELBO)
-    print(optimiser)
+    # check the sequence length (dimension in need for post-processing)
+    sequence_len, height, width = sic_exp_norm.shape
+    #################################################################################
+    ########  operational lead time dependent prediction with testing data   ########
+    #################################################################################
     print('##############################################################')
-    print('##################  start training loop  #####################')
+    print('###################  start prediction loop ###################')
     print('##############################################################')
-    # track training loss
-    hist = np.zeros(num_epochs)
-    hist_likelihood = np.zeros(num_epochs)
-    hist_complexity = np.zeros(num_epochs)
-    # loop of epoch
-    for t in range(num_epochs):
-        # Clear stored gradient
-        model.zero_grad()
-        # loop of timestep
-        for timestep in range(sequence_len - cross_valid_year*12*4 - test_year*12*4):
-            # hidden state re-initialized inside the model when timestep=0
-            #################################################################################
-            ########          create input tensor with multi-input dimension         ########
-            #################################################################################
-            # create variables
-            x_input = np.stack((sic_exp_norm[timestep,:,:],
-                                choice_exp_norm[timestep,:,:],
-                                month_exp[timestep,:,:])) #vstack,hstack,dstack
-            x_var = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width)).to(device)
-            #################################################################################
-            ########       create training tensor with multi-input dimension         ########
-            #################################################################################
-            y_train_stack = sic_exp_norm[timestep+1,:,:] #vstack,hstack,dstack
-            y_var = torch.autograd.Variable(torch.Tensor(y_train_stack).view(-1,hidden_channels[-1],height,width)).to(device)
-            #################################################################################   
-            # Forward pass
-            y_pred, kl_loss, _ = model(x_var, timestep)
-            # choose training data
-            y_target = y_var
-            # torch.nn.functional.mse_loss(y_pred, y_train) can work with (scalar,vector) & (vector,vector)
-            # Please Make Sure y_pred & y_train have the same dimension
-            # accumulate loss
-            if timestep == 0:
-                loss, likelihood, complexity = ELBO(y_pred, y_target, kl_loss,
-                                                    1 / (len(hidden_channels) * 8 * penalty_kl * kernel_size**2))
-            else:
-                loss_step, likelihood_step,\
-                complexity_step = ELBO(y_pred, y_target, kl_loss,
-                                       1 / (len(hidden_channels) * 8 * penalty_kl * kernel_size**2))
-                loss += loss_step
-                likelihood += likelihood_step
-                complexity += complexity_step
-            #print (timestep)
-        #print(y_pred.shape)
-        #print(y_train.shape)
-        # print loss at certain iteration
-        if t % 5 == 0:
-            print("Epoch {} ELBO: {:0.3f}".format(t, loss.item()))
-            logging.info("Epoch {} MSE: {:0.3f}".format(t,loss.item()))
-            print("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
-            logging.info("likelihood cost {:0.3f} #*# complexity cost {:0.3f}".format(likelihood.item(), complexity.item()))
-            #print(y_pred)
-            # gradient check
-            # Gradcheck requires double precision numbers to run
-            #res = torch.autograd.gradcheck(loss_fn, (y_pred.double(), y_train.double()), eps=1e-6, raise_exception=True)
-            #print(res)
-        hist[t] = loss.item()
-        hist_likelihood[t] = likelihood.item()
-        hist_complexity[t] = complexity.item()
-
-        # Zero out gradient, else they will accumulate between epochs
-        optimiser.zero_grad()
-    
-        # Backward pass
-        loss.backward()
-
-        # Update parameters
-        optimiser.step()
-        
-    # save the model
-    # (recommended) save the model parameters only
-    torch.save(model.state_dict(), os.path.join(output_path,'bayesconvlstm_sic_param_validSIC_init.pkl'))
-    # save the entire model
-    # torch.save(model, os.path.join(output_path,'bayesconvlstm.pkl'))
+    # the model learn from time series and try to predict the next time step based on the previous time series
+    print ('*******************************  one step ahead forecast  *********************************')
+    print ('************  the last {} years of total time series are treated as test data  ************'.format(test_year))
+    # time series before test data
+    pred_base_sic = sic_exp_norm[:-test_year*12*4,:,:]
+    pred_base_choice = choice_exp_norm[:-test_year*12*4,:,:]
+    # predict x steps ahead
+    step_lead = 16 # unit week
+    # ensemble to generate
+    ensemble = 20
+    # create a matrix for the prediction
+    lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+    lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+    # start the prediction loop
+    for ens in range(ensemble):
+    # create a matrix for the prediction
+        lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        print('ensemble No. {}'.format(ens))
+        saveNC4 = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_SIC_param_validAll_pred_init_ens_{}.nc'.format(ens))
+        saveNC4_var = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_var_param_validAll_pred_init_ens_{}.nc'.format(ens))
+        for step in range(test_year*12*4):
+            # Clear stored gradient
+            model.zero_grad()
+            # Don't do this if you want your LSTM to be stateful
+            # Otherwise the hidden state should be cleaned up at each time step for prediction (we don't clear hidden state in our forward function)
+            # see example from (https://github.com/pytorch/examples/blob/master/time_sequence_prediction/train.py)
+            # model.hidden = model.init_hidden()
+            # based on the design of this module, the hidden states and cell states are initialized when the module is called.
+            for i in np.arange(1,sequence_len-test_year*12*4 + step + step_lead,1): # here i is actually the time step (index) of prediction, we use var[:i] to predict var[i]
+                #############################################################################
+                ###############           before time of prediction           ###############
+                #############################################################################
+                if i <= (sequence_len-test_year*12*4 + step):
+                    # create variables
+                    x_input = np.stack((sic_exp_norm[i-1,:,:],
+                                        choice_exp_norm[i-1,:,:],
+                                        month_exp[i-1,:,:])) #vstack,hstack,dstack
+                    x_var_pred = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width),
+                                                         requires_grad=False).to(device)
+                    # make prediction
+                    last_pred, _, _ = model(x_var_pred, i-1, training=False)
+                    # record the real prediction after the time of prediction
+                    if i == (sequence_len-test_year*12*4 + step):
+                        lead = 0
+                        # GPU data should be transferred to CPU
+                        lead_pred_sic[step,0,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
+                        lead_pred_choice[step,0,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
+                #############################################################################
+                ###############            after time of prediction           ###############
+                #############################################################################
+                else:
+                    lead += 1
+                    # prepare predictor
+                    # use the predicted data to make new prediction
+                    x_input = np.stack((lead_pred_sic[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        lead_pred_choice[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        month_exp[i-1,:,:])) #vstack,hstack,dstack                  
+                    x_var_pred = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width),
+                                                         requires_grad=False).to(device)       
+                    # make prediction
+                    last_pred, _, _ = model(x_var_pred, i-1, training=False)
+                    # record the prediction
+                    lead_pred_sic[step,lead,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
+                    lead_pred_choice[step,lead,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
+        saveNC.ncfile(lead_pred_sic)
+        saveNC4_var.ncfile(lead_pred_choice)
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
     logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))
-    
-    print ("*******************  Loss with time  **********************")
-    fig00 = plt.figure()
-    plt.plot(hist, 'r', label="Training loss")
-    plt.plot(hist_likelihood, 'g', label="Likelihood loss")
-    plt.plot(hist_complexity, 'b', label="Complexity loss")
-    plt.xlabel('Epoch')
-    plt.ylabel('Error')
-    plt.legend()
-    fig00.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_param_validSIC_pred_error_init.png'),dpi=200)
-    
-    print ("*******************  Loss with time (log)  **********************")
-    fig01 = plt.figure()
-    plt.plot(np.log(hist), 'r', label="Training loss")
-    plt.plot(np.log(hist_likelihood), 'g', label="Likelihood loss")
-    plt.plot(np.log(hist_complexity), 'b', label="Complexity loss")
-    plt.xlabel('Epoch')
-    plt.ylabel('Log error')
-    plt.legend()
-    plt.show()
-    fig01.savefig(os.path.join(output_path,'SIC_ERAI_BayesConvLSTM_param_validSIC_pred_log_error_init.png'),dpi=200)

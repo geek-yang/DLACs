@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Load and reuse model
 Author       : Yang Liu
 First Built  : 2020.03.09
-Last Update  : 2020.03.11
+Last Update  : 2020.07.22
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -31,7 +31,7 @@ import os
 from netCDF4 import Dataset
 # for pre-processing and machine learning
 import numpy as np
-import sklearn
+#import sklearn
 #import scipy
 import torch
 import torch.nn.functional
@@ -81,12 +81,12 @@ start_time = tttt.time()
 # please specify data path
 datapath = '/projects/0/blueactn/dataBayes'
 output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
-model_name = 'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_500_validSIC.pkl'
+model_name = 'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_700_validAll.pkl'
 ################################################################################# 
 #########                             main                               ########
 #################################################################################
 # set up logging files
-logging.basicConfig(filename = os.path.join(output_path,'logFile.log'),
+logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_param_validAll_pred_init.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -129,45 +129,45 @@ if __name__=="__main__":
     # integrals from spatial fields cover the area from 20N - 90N (4D fields [year, month, lat, lon])
     # *************************************************************************************** #
     # SIC (ERA-Interim) - benckmark
-    SIC_ERAI = dataset_ERAI_fields_sic.variables['sic'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-    year_ERAI = dataset_ERAI_fields_sic.variables['year'][:-1]
+    SIC_ERAI = dataset_ERAI_fields_sic.variables['sic'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI = dataset_ERAI_fields_sic.variables['year'][:]
     week_ERAI = dataset_ERAI_fields_sic.variables['week'][:]
     latitude_ERAI = dataset_ERAI_fields_sic.variables['latitude'][:]
     longitude_ERAI = dataset_ERAI_fields_sic.variables['longitude'][:]
     # T2M (ERA-Interim)
-#     T2M_ERAI = dataset_ERAI_fields_t2m.variables['t2m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_t2m = dataset_ERAI_fields_t2m.variables['year'][:-1]
+#     T2M_ERAI = dataset_ERAI_fields_t2m.variables['t2m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_t2m = dataset_ERAI_fields_t2m.variables['year'][:]
 #     week_ERAI_t2m = dataset_ERAI_fields_t2m.variables['week'][:]
 #     latitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['latitude'][:]
 #     longitude_ERAI_t2m = dataset_ERAI_fields_t2m.variables['longitude'][:]
     # SLP (ERA-Interim)
-#     SLP_ERAI = dataset_ERAI_fields_slp.variables['slp'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_slp = dataset_ERAI_fields_slp.variables['year'][:-1]
+#     SLP_ERAI = dataset_ERAI_fields_slp.variables['slp'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_slp = dataset_ERAI_fields_slp.variables['year'][:]
 #     week_ERAI_slp = dataset_ERAI_fields_slp.variables['week'][:]
 #     latitude_ERAI_slp = dataset_ERAI_fields_slp.variables['latitude'][:]
 #     longitude_ERAI_slp = dataset_ERAI_fields_slp.variables['longitude'][:]
     # Z500 (ERA-Interim)
-#     Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:-1]
+#     Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:]
 #     week_ERAI_z500 = dataset_ERAI_fields_z500.variables['week'][:]
 #     latitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['latitude'][:]
 #     longitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['longitude'][:]
     # Z850 (ERA-Interim)
-#     Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:-1]
+#     Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:]
 #     week_ERAI_z850 = dataset_ERAI_fields_z850.variables['week'][:]
 #     latitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['latitude'][:]
 #     longitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['longitude'][:]
     # UV10M (ERA-Interim)
-#     U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:-1]
+#     U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:]
 #     week_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['week'][:]
 #     latitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['latitude'][:]
 #     longitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['longitude'][:]
     # SFlux (ERA-Interim)
-#     SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:-1,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:-1]
+#     SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#     year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:]
 #     week_ERAI_SFlux = dataset_ERAI_fields_rad.variables['week'][:]
 #     latitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['latitude'][:]
 #     longitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['longitude'][:]
@@ -176,7 +176,7 @@ if __name__=="__main__":
     #year_SIV = dataset_PIOMASS_siv.variables['year'][:-1]
     # OHC (ORAS4)
     # from 1978 - 2017 (for interpolation) / from 90 N upto 40 N
-    OHC_300_ORAS4 = dataset_ORAS4_OHC.variables['OHC'][:-1,:,:67,:]/1000 # unit Peta Joule
+    OHC_300_ORAS4 = dataset_ORAS4_OHC.variables['OHC'][:,:,:67,:]/1000 # unit Peta Joule
     latitude_ORAS4 = dataset_ORAS4_OHC.variables['latitude'][:]
     longitude_ORAS4 = dataset_ORAS4_OHC.variables['longitude'][:]
     mask_OHC = np.ma.getmask(OHC_300_ORAS4[0,0,:,:])
@@ -308,7 +308,7 @@ if __name__=="__main__":
     sic_min = np.amin(sic_exp)
     print ('====================    A series of time (index)    ====================')
     _, yy, xx = sic_exp_norm.shape # get the lat lon dimension
-    year = np.arange(1979,2017,1)
+    year = np.arange(1979,2018,1)
     year_cycle = np.repeat(year,48)
     month_cycle = np.repeat(np.arange(1,13,1),4)
     month_cycle = np.tile(month_cycle,len(year)+1) # one extra repeat for lead time dependent prediction
@@ -343,12 +343,12 @@ if __name__=="__main__":
     batch_size = 1
     #num_layers = 1
     learning_rate = 0.01
-    num_epochs = 1500
+    num_epochs = 700
     print ('*******************  cross validation and testing data  *********************')
     # take 10% data as cross-validation data
-    cross_valid_year = 4
+    cross_valid_year = 0
     # take 10% years as testing data
-    test_year = 4
+    test_year = 3
     # minibatch
     #iterations = 3 # training data divided into 3 sets
     print ('*******************  check the environment  *********************')
@@ -368,11 +368,6 @@ if __name__=="__main__":
     model.load_state_dict(torch.load(os.path.join(output_path,model_name), map_location=device))
     # load entire model
     #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
-    #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_z850_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
-    #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_t2m_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
-    #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_sflux_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
-    #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_slp_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
-    #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_z850_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     print(model)
     # check the sequence length (dimension in need for post-processing)
     sequence_len, height, width = sic_exp_norm.shape
@@ -387,16 +382,22 @@ if __name__=="__main__":
     print ('************  the last {} years of total time series are treated as test data  ************'.format(test_year))
     # time series before test data
     pred_base_sic = sic_exp_norm[:-test_year*12*4,:,:]
+    pred_base_choice = choice_exp_norm[:-test_year*12*4,:,:]
     # predict x steps ahead
     step_lead = 16 # unit week
     # ensemble to generate
-    ensemble = 10
+    ensemble = 20
     # create a matrix for the prediction
     lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+    lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
     # start the prediction loop
     for ens in range(ensemble):
+    # create a matrix for the prediction
+        lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
         print('ensemble No. {}'.format(ens))
-        saveNC4 = dlacs.saveNetCDF.savenc(output_path, 'pred_sic_ens_{}.nc'.format(ens))
+        saveNC4 = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_SIC_param_validAll_pred_init_ens_{}.nc'.format(ens))
+        saveNC4_var = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_var_param_validAll_pred_init_ens_{}.nc'.format(ens))
         for step in range(test_year*12*4):
             # Clear stored gradient
             model.zero_grad()
@@ -423,29 +424,25 @@ if __name__=="__main__":
                         lead = 0
                         # GPU data should be transferred to CPU
                         lead_pred_sic[step,0,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
+                        lead_pred_choice[step,0,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
                 #############################################################################
                 ###############            after time of prediction           ###############
                 #############################################################################
                 else:
                     lead += 1
                     # prepare predictor
-                    if i <= sequence_len:
-                        # use the predicted data to make new prediction
-                        x_input = np.stack((lead_pred_sic[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
-                                            choice_exp_norm[i-1,:,:],
-                                            month_exp[i-1,:,:])) #vstack,hstack,dstack
-                    else: # choice_exp_norm out of range, use the last value
-                        x_input = np.stack((lead_pred_sic[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
-                                            choice_exp_norm[-1,:,:],
-                                            month_exp[i-1,:,:])) #vstack,hstack,dstack                    
+                    # use the predicted data to make new prediction
+                    x_input = np.stack((lead_pred_sic[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        lead_pred_choice[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        month_exp[i-1,:,:])) #vstack,hstack,dstack                  
                     x_var_pred = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width),
                                                          requires_grad=False).to(device)       
                     # make prediction
                     last_pred, _, _ = model(x_var_pred, i-1, training=False)
                     # record the prediction
                     lead_pred_sic[step,lead,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
+                    lead_pred_choice[step,lead,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
         saveNC.ncfile(lead_pred_sic)
+        saveNC4_var.ncfile(lead_pred_choice)
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
     logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))
-    
-    
