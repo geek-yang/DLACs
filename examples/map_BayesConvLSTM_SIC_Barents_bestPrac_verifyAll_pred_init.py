@@ -371,6 +371,7 @@ if __name__=="__main__":
     print(model)
     # check the sequence length (dimension in need for post-processing)
     sequence_len, height, width = sic_exp_norm.shape
+    logging.info("Loading model successfully!")
     #################################################################################
     ########  operational lead time dependent prediction with testing data   ########
     #################################################################################
@@ -396,6 +397,7 @@ if __name__=="__main__":
         lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
         lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
         print('ensemble No. {}'.format(ens))
+        logging.info('Processing ensemble No. {}'.format(ens))
         saveNC4 = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_SIC_param_validAll_pred_init_ens_{}.nc'.format(ens))
         saveNC4_var = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_var_param_validAll_pred_init_ens_{}.nc'.format(ens))
         for step in range(test_year*12*4):
@@ -442,7 +444,7 @@ if __name__=="__main__":
                     # record the prediction
                     lead_pred_sic[step,lead,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
                     lead_pred_choice[step,lead,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
-        saveNC.ncfile(lead_pred_sic)
+        saveNC4.ncfile(lead_pred_sic)
         saveNC4_var.ncfile(lead_pred_choice)
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
     logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))

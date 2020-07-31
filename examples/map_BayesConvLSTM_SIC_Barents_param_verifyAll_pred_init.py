@@ -81,7 +81,7 @@ start_time = tttt.time()
 # please specify data path
 datapath = '/projects/0/blueactn/dataBayes'
 output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
-model_name = 'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_700_validAll.pkl'
+model_name = 'map_BayesConvLSTM_sic_ohc_hl_3_kernel_3_lr_0.01_epoch_700_validAll.pkl'
 ################################################################################# 
 #########                             main                               ########
 #################################################################################
@@ -333,7 +333,7 @@ if __name__=="__main__":
     print ('*******************  create basic dimensions for tensor and network  *********************')
     # specifications of neural network
     input_channels = 3
-    hidden_channels = [3, 2, 1] # number of channels & hidden layers, the channels of last layer is the channels of output, too
+    hidden_channels = [3, 3, 2] # number of channels & hidden layers, the channels of last layer is the channels of output, too
     #hidden_channels = [3, 3, 3, 3, 2]
     #hidden_channels = [2]
     kernel_size = 3
@@ -371,6 +371,7 @@ if __name__=="__main__":
     print(model)
     # check the sequence length (dimension in need for post-processing)
     sequence_len, height, width = sic_exp_norm.shape
+    logging.info("Loading model successfully!")
     #################################################################################
     ########  operational lead time dependent prediction with testing data   ########
     #################################################################################
@@ -395,7 +396,8 @@ if __name__=="__main__":
     # create a matrix for the prediction
         lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
         lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
-        print('ensemble No. {}'.format(ens))
+        print('Processing ensemble No. {}'.format(ens))
+        logging.info('Processing ensemble No. {}'.format(ens))
         saveNC4 = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_SIC_param_validAll_pred_init_ens_{}.nc'.format(ens))
         saveNC4_var = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_var_param_validAll_pred_init_ens_{}.nc'.format(ens))
         for step in range(test_year*12*4):
@@ -442,7 +444,7 @@ if __name__=="__main__":
                     # record the prediction
                     lead_pred_sic[step,lead,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
                     lead_pred_choice[step,lead,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
-        saveNC.ncfile(lead_pred_sic)
+        saveNC4.ncfile(lead_pred_sic)
         saveNC4_var.ncfile(lead_pred_choice)
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
     logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))
