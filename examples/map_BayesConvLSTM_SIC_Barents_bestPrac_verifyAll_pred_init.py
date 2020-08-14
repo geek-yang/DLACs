@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at weekly time scale - Load and reuse model
 Author       : Yang Liu
 First Built  : 2020.03.09
-Last Update  : 2020.07.22
+Last Update  : 2020.08.12
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -43,6 +43,7 @@ import dlacs
 import dlacs.BayesConvLSTM
 import dlacs.preprocess
 import dlacs.function
+import dlacs.saveNetCDF
 
 # for visualization
 import dlacs.visual
@@ -80,13 +81,14 @@ start_time = tttt.time()
 # **ORAS4**       1958 - 2014 (ECMWF)
 # please specify data path
 datapath = '/projects/0/blueactn/dataBayes'
-output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
-model_name = 'map_BayesConvLSTM_sic_ohc_Barents_hl_3_kernel_3_lr_0.01_epoch_700_validAll.pkl'
+output_path = '/home/lwc16308/BayesArctic/DLACs/forecast'
+model_path = '/home/lwc16308/BayesArctic/DLACs/models'
+model_name = 'map_BayesConvLSTM_sic_t2m_slp_z850_sflux_ohc_hl_3_kernel_3_lr_0.01_epoch_1000_validAll.pkl'
 ################################################################################# 
 #########                             main                               ########
 #################################################################################
 # set up logging files
-logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_param_validAll_pred_init.log'),
+logging.basicConfig(filename = os.path.join(output_path,'logFile_BayesConvLSTM_SIC_bestPrac_validAll_pred_init.log'),
                     filemode = 'w+', level = logging.DEBUG,
                     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -95,17 +97,17 @@ if __name__=="__main__":
     # weekly variables on ERAI grid
     dataset_ERAI_fields_sic = Dataset(os.path.join(datapath,
                                       'sic_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_slp = Dataset(os.path.join(datapath_ERAI,
+    dataset_ERAI_fields_slp = Dataset(os.path.join(datapath,
                                       'slp_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath_ERAI,
+    dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath,
                                       't2m_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
-                                       'z500_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath_ERAI,
+#    dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
+#                                       'z500_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath,
                                        'z850_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
-                                       'uv10m_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_rad = Dataset(os.path.join(datapath_ERAI,
+#    dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
+#                                       'uv10m_weekly_erai_1979_2017.nc'))
+    dataset_ERAI_fields_rad = Dataset(os.path.join(datapath,
                                         'rad_flux_weekly_erai_1979_2017.nc'))
     #dataset_PIOMASS_siv = Dataset(os.path.join(datapath_PIOMASS,
     #                             'siv_monthly_PIOMASS_1979_2017.nc'))
@@ -153,11 +155,11 @@ if __name__=="__main__":
 #     latitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['latitude'][:]
 #     longitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['longitude'][:]
     # Z850 (ERA-Interim)
-#     Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:]
-#     week_ERAI_z850 = dataset_ERAI_fields_z850.variables['week'][:]
-#     latitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['latitude'][:]
-#     longitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['longitude'][:]
+    Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:]
+    week_ERAI_z850 = dataset_ERAI_fields_z850.variables['week'][:]
+    latitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['latitude'][:]
+    longitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['longitude'][:]
     # UV10M (ERA-Interim)
 #     U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
 #     V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
@@ -166,11 +168,11 @@ if __name__=="__main__":
 #     latitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['latitude'][:]
 #     longitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['longitude'][:]
     # SFlux (ERA-Interim)
-#     SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:,:,:,:] # 4D fields [year, week, lat, lon]
-#     year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:]
-#     week_ERAI_SFlux = dataset_ERAI_fields_rad.variables['week'][:]
-#     latitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['latitude'][:]
-#     longitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['longitude'][:]
+    SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:,:,:,:] # 4D fields [year, week, lat, lon]
+    year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:]
+    week_ERAI_SFlux = dataset_ERAI_fields_rad.variables['week'][:]
+    latitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['latitude'][:]
+    longitude_ERAI_SFlux = dataset_ERAI_fields_rad.variables['longitude'][:]
     #SIV (PIOMASS)
     #SIV_PIOMASS = dataset_PIOMASS_siv.variables['SIV'][:-12]
     #year_SIV = dataset_PIOMASS_siv.variables['year'][:-1]
@@ -262,50 +264,60 @@ if __name__=="__main__":
     dy = np.pi * constant['R'] / 480
     # calculate the sea ice area
     SIC_ERAI_area = np.zeros(SIC_ERAI.shape, dtype=float)
-#     SFlux_ERAI_area = np.zeros(SFlux_ERAI.shape, dtype=float)
+    SFlux_ERAI_area = np.zeros(SFlux_ERAI.shape, dtype=float)
     for i in np.arange(len(latitude_ERAI[:])):
         # change the unit to terawatt
         SIC_ERAI_area[:,:,i,:] = SIC_ERAI[:,:,i,:]* dx[i] * dy / 1E+6 # unit km2
-#         SFlux_ERAI_area[:,:,i,:] = SFlux_ERAI[:,:,i,:]* dx[i] * dy / 1E+12 # unit TeraWatt
+        SFlux_ERAI_area[:,:,i,:] = SFlux_ERAI[:,:,i,:]* dx[i] * dy / 1E+12 # unit TeraWatt
     SIC_ERAI_area[SIC_ERAI_area<0] = 0 # switch the mask from -1 to 0
     print ('================  reshape input data into time series  =================')
     SIC_ERAI_area_series = dlacs.preprocess.operator.unfold(SIC_ERAI_area)
-#     T2M_ERAI_series = dlacs.preprocess.operator.unfold(T2M_ERAI)
-#     SLP_ERAI_series = dlacs.preprocess.operator.unfold(SLP_ERAI)
-#     Z500_ERAI_series = dlacs.preprocess.operator.unfold(Z500_ERAI)
-#     Z850_ERAI_series = dlacs.preprocess.operator.unfold(Z850_ERAI)
-#     U10M_ERAI_series = dlacs.preprocess.operator.unfold(U10M_ERAI)
-#     V10M_ERAI_series = dlacs.preprocess.operator.unfold(V10M_ERAI)
-#     SFlux_ERAI_area_series = dlacs.preprocess.operator.unfold(SFlux_ERAI_area)
+    T2M_ERAI_series = dlacs.preprocess.operator.unfold(T2M_ERAI)
+    SLP_ERAI_series = dlacs.preprocess.operator.unfold(SLP_ERAI)
+#    Z500_ERAI_series = dlacs.preprocess.operator.unfold(Z500_ERAI)
+    Z850_ERAI_series = dlacs.preprocess.operator.unfold(Z850_ERAI)
+#    U10M_ERAI_series = dlacs.preprocess.operator.unfold(U10M_ERAI)
+#    V10M_ERAI_series = dlacs.preprocess.operator.unfold(V10M_ERAI)
+    SFlux_ERAI_area_series = dlacs.preprocess.operator.unfold(SFlux_ERAI_area)
     print ('******************  choose the fields from target region  *******************')
     # select land-sea mask
     sea_ice_mask_barents = sea_ice_mask_global[12:36,264:320]
     # select the area between greenland and ice land for instance 60-70 N / 44-18 W
     sic_exp = SIC_ERAI_area_series[:,12:36,264:320]
-#     t2m_exp = T2M_ERAI_series[:,12:36,264:320]
-#     slp_exp = SLP_ERAI_series[:,12:36,264:320]
-#     z500_exp = Z500_ERAI_series[:,12:36,264:320]
-#     z850_exp = Z850_ERAI_series[:,12:36,264:320]
+    t2m_exp = T2M_ERAI_series[:,12:36,264:320]
+    slp_exp = SLP_ERAI_series[:,12:36,264:320]
+#    z500_exp = Z500_ERAI_series[:,12:36,264:320]
+    z850_exp = Z850_ERAI_series[:,12:36,264:320]
 #     u10m_exp = U10M_ERAI_series[:,12:36,264:320]
 #     v10m_exp = V10M_ERAI_series[:,12:36,264:320]
-#     sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
+    sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
     ohc_exp = OHC_300_ORAS4_weekly_series[:,12:36,264:320]
     #print(longitude_ERAI[180:216])
     #print(sic_exp[:])
     print ('*******************  pre-processing  *********************')
     print ('=========================   normalize data   ===========================')
     sic_exp_norm = dlacs.preprocess.operator.normalize(sic_exp)
-#     t2m_exp_norm = deepclim.preprocess.operator.normalize(t2m_exp)
-#     slp_exp_norm = deepclim.preprocess.operator.normalize(slp_exp)
-#     z500_exp_norm = deepclim.preprocess.operator.normalize(z500_exp)
-#     z850_exp_norm = deepclim.preprocess.operator.normalize(z850_exp)
-#     u10m_exp_norm = deepclim.preprocess.operator.normalize(u10m_exp)
-#     v10m_exp_norm = deepclim.preprocess.operator.normalize(v10m_exp)
-#     sflux_exp_norm = deepclim.preprocess.operator.normalize(sflux_exp)
+    t2m_exp_norm = dlacs.preprocess.operator.normalize(t2m_exp)
+    slp_exp_norm = dlacs.preprocess.operator.normalize(slp_exp)
+#     z500_exp_norm = dlacs.preprocess.operator.normalize(z500_exp)
+    z850_exp_norm = dlacs.preprocess.operator.normalize(z850_exp)
+#     u10m_exp_norm = dlacs.preprocess.operator.normalize(u10m_exp)
+#     v10m_exp_norm = dlacs.preprocess.operator.normalize(v10m_exp)
+    sflux_exp_norm = dlacs.preprocess.operator.normalize(sflux_exp)
     ohc_exp_norm = dlacs.preprocess.operator.normalize(ohc_exp)
     print('================  save the normalizing factor  =================')
     sic_max = np.amax(sic_exp)
     sic_min = np.amin(sic_exp)
+    ohc_max = np.amax(ohc_exp)
+    ohc_min = np.amin(ohc_exp)
+    t2m_max = np.amax(t2m_exp)
+    t2m_min = np.amin(t2m_exp)
+    slp_max = np.amax(slp_exp)
+    slp_min = np.amin(slp_exp)
+    z850_max = np.amax(z850_exp)
+    z850_min = np.amin(z850_exp)
+    sflux_max = np.amax(sflux_exp)
+    sflux_min = np.amin(sflux_exp)
     print ('====================    A series of time (index)    ====================')
     _, yy, xx = sic_exp_norm.shape # get the lat lon dimension
     year = np.arange(1979,2018,1)
@@ -332,8 +344,8 @@ if __name__=="__main__":
     choice_exp_norm = ohc_exp_norm
     print ('*******************  create basic dimensions for tensor and network  *********************')
     # specifications of neural network
-    input_channels = 3
-    hidden_channels = [3, 2, 1] # number of channels & hidden layers, the channels of last layer is the channels of output, too
+    input_channels = 7
+    hidden_channels = [7, 7, 6] # number of channels & hidden layers, the channels of last layer is the channels of output, too
     #hidden_channels = [3, 3, 3, 3, 2]
     #hidden_channels = [2]
     kernel_size = 3
@@ -343,7 +355,7 @@ if __name__=="__main__":
     batch_size = 1
     #num_layers = 1
     learning_rate = 0.01
-    num_epochs = 700
+    num_epochs = 1000
     print ('*******************  cross validation and testing data  *********************')
     # take 10% data as cross-validation data
     cross_valid_year = 0
@@ -383,23 +395,32 @@ if __name__=="__main__":
     print ('************  the last {} years of total time series are treated as test data  ************'.format(test_year))
     # time series before test data
     pred_base_sic = sic_exp_norm[:-test_year*12*4,:,:]
-    pred_base_choice = choice_exp_norm[:-test_year*12*4,:,:]
+    pred_base_ohc = ohc_exp_norm[:-test_year*12*4,:,:]
+    pred_base_t2m = t2m_exp_norm[:-test_year*12*4,:,:]
+    pred_base_slp = slp_exp_norm[:-test_year*12*4,:,:]
+    pred_base_z850 = z850_exp_norm[:-test_year*12*4,:,:]
+    pred_base_sflux = sflux_exp_norm[:-test_year*12*4,:,:]
     # predict x steps ahead
     step_lead = 16 # unit week
     # ensemble to generate
     ensemble = 20
-    # create a matrix for the prediction
-    lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
-    lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
     # start the prediction loop
     for ens in range(ensemble):
     # create a matrix for the prediction
         lead_pred_sic = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
-        lead_pred_choice = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        lead_pred_ohc = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        lead_pred_t2m = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        lead_pred_slp = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        lead_pred_z850 = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
+        lead_pred_sflux = np.zeros((test_year*12*4,step_lead,height,width),dtype=float) # dim [predict time, lead time, lat, lon]
         print('ensemble No. {}'.format(ens))
         logging.info('Processing ensemble No. {}'.format(ens))
         saveNC4 = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_SIC_param_validAll_pred_init_ens_{}.nc'.format(ens))
-        saveNC4_var = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_var_param_validAll_pred_init_ens_{}.nc'.format(ens))
+        saveNC4_ohc = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_OHC_bestPrac_validAll_pred_init_ens_{}.nc'.format(ens))
+        saveNC4_t2m = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_T2M_bestPrac_validAll_pred_init_ens_{}.nc'.format(ens))
+        saveNC4_slp = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_SLP_bestPrac_validAll_pred_init_ens_{}.nc'.format(ens))
+        saveNC4_z850 = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_Z850_bestPrac_validAll_pred_init_ens_{}.nc'.format(ens))
+        saveNC4_sflux = dlacs.saveNetCDF.savenc(output_path, 'BayesConvLSTM_SFlux_bestPrac_validAll_pred_init_ens_{}.nc'.format(ens))
         for step in range(test_year*12*4):
             # Clear stored gradient
             model.zero_grad()
@@ -415,7 +436,14 @@ if __name__=="__main__":
                 if i <= (sequence_len-test_year*12*4 + step):
                     # create variables
                     x_input = np.stack((sic_exp_norm[i-1,:,:],
-                                        choice_exp_norm[i-1,:,:],
+                                        ohc_exp_norm[i-1,:,:],
+                                        t2m_exp_norm[i-1,:,:],
+                                        slp_exp_norm[i-1,:,:],
+                                        #z500_exp_norm[i-1,:,:],
+                                        z850_exp_norm[i-1,:,:],
+                                        #u10m_exp_norm[i-1,:,:],
+                                        #v10m_exp_norm[i-1,:,:],
+                                        sflux_exp_norm[i-1,:,:],                                       
                                         month_exp[i-1,:,:])) #vstack,hstack,dstack
                     x_var_pred = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width),
                                                          requires_grad=False).to(device)
@@ -426,7 +454,11 @@ if __name__=="__main__":
                         lead = 0
                         # GPU data should be transferred to CPU
                         lead_pred_sic[step,0,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
-                        lead_pred_choice[step,0,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
+                        lead_pred_ohc[step,0,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
+                        lead_pred_t2m[step,0,:,:] = last_pred[0,2,:,:].cpu().data.numpy()
+                        lead_pred_slp[step,0,:,:] = last_pred[0,3,:,:].cpu().data.numpy()
+                        lead_pred_z850[step,0,:,:] = last_pred[0,4,:,:].cpu().data.numpy()
+                        lead_pred_sflux[step,0,:,:] = last_pred[0,5,:,:].cpu().data.numpy()
                 #############################################################################
                 ###############            after time of prediction           ###############
                 #############################################################################
@@ -435,7 +467,11 @@ if __name__=="__main__":
                     # prepare predictor
                     # use the predicted data to make new prediction
                     x_input = np.stack((lead_pred_sic[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
-                                        lead_pred_choice[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        lead_pred_ohc[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        lead_pred_t2m[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        lead_pred_slp[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        lead_pred_z850[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
+                                        lead_pred_sflux[step,i-(sequence_len-test_year*12*4 + step +1),:,:],
                                         month_exp[i-1,:,:])) #vstack,hstack,dstack                  
                     x_var_pred = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width),
                                                          requires_grad=False).to(device)       
@@ -443,8 +479,16 @@ if __name__=="__main__":
                     last_pred, _, _ = model(x_var_pred, i-1, training=False)
                     # record the prediction
                     lead_pred_sic[step,lead,:,:] = last_pred[0,0,:,:].cpu().data.numpy()
-                    lead_pred_choice[step,lead,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
+                    lead_pred_ohc[step,lead,:,:] = last_pred[0,1,:,:].cpu().data.numpy()
+                    lead_pred_t2m[step,lead,:,:] = last_pred[0,2,:,:].cpu().data.numpy()
+                    lead_pred_slp[step,lead,:,:] = last_pred[0,3,:,:].cpu().data.numpy()
+                    lead_pred_z850[step,lead,:,:] = last_pred[0,4,:,:].cpu().data.numpy()
+                    lead_pred_sflux[step,lead,:,:] = last_pred[0,5,:,:].cpu().data.numpy()
         saveNC4.ncfile(lead_pred_sic)
-        saveNC4_var.ncfile(lead_pred_choice)
+        saveNC4_ohc.ncfile(lead_pred_ohc)
+        saveNC4_t2m.ncfile(lead_pred_t2m)
+        saveNC4_slp.ncfile(lead_pred_slp)
+        saveNC4_z850.ncfile(lead_pred_z850)
+        saveNC4_sflux.ncfile(lead_pred_sflux)
     print ("--- %s minutes ---" % ((tttt.time() - start_time)/60))
     logging.info("--- %s minutes ---" % ((tttt.time() - start_time)/60))

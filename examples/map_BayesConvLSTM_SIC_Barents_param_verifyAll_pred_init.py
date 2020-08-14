@@ -43,6 +43,7 @@ import dlacs
 import dlacs.BayesConvLSTM
 import dlacs.preprocess
 import dlacs.function
+import dlacs.saveNetCDF
 
 # for visualization
 import dlacs.visual
@@ -80,7 +81,8 @@ start_time = tttt.time()
 # **ORAS4**       1958 - 2014 (ECMWF)
 # please specify data path
 datapath = '/projects/0/blueactn/dataBayes'
-output_path = '/home/lwc16308/BayesArctic/DLACs/models/'
+output_path = '/home/lwc16308/BayesArctic/DLACs/forecast'
+model_path = '/home/lwc16308/BayesArctic/DLACs/models'
 model_name = 'map_BayesConvLSTM_sic_ohc_hl_3_kernel_3_lr_0.01_epoch_700_validAll.pkl'
 ################################################################################# 
 #########                             main                               ########
@@ -95,17 +97,17 @@ if __name__=="__main__":
     # weekly variables on ERAI grid
     dataset_ERAI_fields_sic = Dataset(os.path.join(datapath,
                                       'sic_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_slp = Dataset(os.path.join(datapath_ERAI,
+#     dataset_ERAI_fields_slp = Dataset(os.path.join(datapath,
 #                                       'slp_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath_ERAI,
+#     dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath,
 #                                       't2m_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
+#     dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath,
 #                                        'z500_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath_ERAI,
+#     dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath,
 #                                        'z850_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
+#     dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath,
 #                                        'uv10m_weekly_erai_1979_2017.nc'))
-#     dataset_ERAI_fields_rad = Dataset(os.path.join(datapath_ERAI,
+#     dataset_ERAI_fields_rad = Dataset(os.path.join(datapath,
 #                                         'rad_flux_weekly_erai_1979_2017.nc'))
     #dataset_PIOMASS_siv = Dataset(os.path.join(datapath_PIOMASS,
     #                             'siv_monthly_PIOMASS_1979_2017.nc'))
@@ -365,7 +367,7 @@ if __name__=="__main__":
     print ('*******************  load exsited LSTM model  *********************')
     # load model parameters
     model = dlacs.BayesConvLSTM.BayesConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
-    model.load_state_dict(torch.load(os.path.join(output_path,model_name), map_location=device))
+    model.load_state_dict(torch.load(os.path.join(model_path,model_name), map_location=device))
     # load entire model
     #model = torch.load(os.path.join(output_path, 'Barents','convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     print(model)

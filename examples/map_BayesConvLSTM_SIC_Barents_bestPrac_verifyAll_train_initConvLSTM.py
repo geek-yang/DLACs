@@ -5,7 +5,7 @@ Function     : Predict the Spatial Sea Ice Concentration with BayesConvLSTM at w
                Model initialize with ConvLSTM weight
 Author       : Yang Liu
 First Built  : 2020.07.22
-Last Update  : 2020.07.22
+Last Update  : 2020.08.12
 Library      : Pytorth, Numpy, NetCDF4, os, iris, cartopy, dlacs, matplotlib
 Description  : This notebook serves to predict the Arctic sea ice using deep learning. The Bayesian Convolutional
                Long Short Time Memory neural network is used to deal with this spatial-temporal sequence problem.
@@ -103,12 +103,12 @@ if __name__=="__main__":
                                        'slp_weekly_erai_1979_2017.nc'))
     dataset_ERAI_fields_t2m = Dataset(os.path.join(datapath_ERAI,
                                        't2m_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
-                                        'z500_weekly_erai_1979_2017.nc'))
+#    dataset_ERAI_fields_z500 = Dataset(os.path.join(datapath_ERAI,
+#                                        'z500_weekly_erai_1979_2017.nc'))
     dataset_ERAI_fields_z850 = Dataset(os.path.join(datapath_ERAI,
                                        'z850_weekly_erai_1979_2017.nc'))
-    dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
-                                       'uv10m_weekly_erai_1979_2017.nc'))
+#    dataset_ERAI_fields_uv10m = Dataset(os.path.join(datapath_ERAI,
+#                                       'uv10m_weekly_erai_1979_2017.nc'))
     dataset_ERAI_fields_rad = Dataset(os.path.join(datapath_ERAI,
                                         'rad_flux_weekly_erai_1979_2017.nc'))
     #dataset_PIOMASS_siv = Dataset(os.path.join(datapath_PIOMASS,
@@ -151,11 +151,11 @@ if __name__=="__main__":
     latitude_ERAI_slp = dataset_ERAI_fields_slp.variables['latitude'][:]
     longitude_ERAI_slp = dataset_ERAI_fields_slp.variables['longitude'][:]
     # Z500 (ERA-Interim)
-    Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
-    year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:]
-    week_ERAI_z500 = dataset_ERAI_fields_z500.variables['week'][:]
-    latitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['latitude'][:]
-    longitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['longitude'][:]
+#    Z500_ERAI = dataset_ERAI_fields_z500.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#    year_ERAI_z500 = dataset_ERAI_fields_z500.variables['year'][:]
+#    week_ERAI_z500 = dataset_ERAI_fields_z500.variables['week'][:]
+#    latitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['latitude'][:]
+#    longitude_ERAI_z500 = dataset_ERAI_fields_z500.variables['longitude'][:]
     # Z850 (ERA-Interim)
     Z850_ERAI = dataset_ERAI_fields_z850.variables['z'][:,:,:,:] # 4D fields [year, week, lat, lon]
     year_ERAI_z850 = dataset_ERAI_fields_z850.variables['year'][:]
@@ -163,12 +163,12 @@ if __name__=="__main__":
     latitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['latitude'][:]
     longitude_ERAI_z850 = dataset_ERAI_fields_z850.variables['longitude'][:]
     # UV10M (ERA-Interim)
-    U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
-    V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
-    year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:]
-    week_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['week'][:]
-    latitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['latitude'][:]
-    longitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['longitude'][:]
+#    U10M_ERAI = dataset_ERAI_fields_uv10m.variables['u10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#    V10M_ERAI = dataset_ERAI_fields_uv10m.variables['v10m'][:,:,:,:] # 4D fields [year, week, lat, lon]
+#    year_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['year'][:]
+#    week_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['week'][:]
+#    latitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['latitude'][:]
+#    longitude_ERAI_uv10m = dataset_ERAI_fields_uv10m.variables['longitude'][:]
     # SFlux (ERA-Interim)
     SFlux_ERAI = dataset_ERAI_fields_rad.variables['SFlux'][:,:,:,:] # 4D fields [year, week, lat, lon]
     year_ERAI_SFlux = dataset_ERAI_fields_rad.variables['year'][:]
@@ -276,10 +276,10 @@ if __name__=="__main__":
     SIC_ERAI_area_series = dlacs.preprocess.operator.unfold(SIC_ERAI_area)
     T2M_ERAI_series = dlacs.preprocess.operator.unfold(T2M_ERAI)
     SLP_ERAI_series = dlacs.preprocess.operator.unfold(SLP_ERAI)
-    Z500_ERAI_series = dlacs.preprocess.operator.unfold(Z500_ERAI)
+#    Z500_ERAI_series = dlacs.preprocess.operator.unfold(Z500_ERAI)
     Z850_ERAI_series = dlacs.preprocess.operator.unfold(Z850_ERAI)
-    U10M_ERAI_series = dlacs.preprocess.operator.unfold(U10M_ERAI)
-    V10M_ERAI_series = dlacs.preprocess.operator.unfold(V10M_ERAI)
+#    U10M_ERAI_series = dlacs.preprocess.operator.unfold(U10M_ERAI)
+#    V10M_ERAI_series = dlacs.preprocess.operator.unfold(V10M_ERAI)
     SFlux_ERAI_area_series = dlacs.preprocess.operator.unfold(SFlux_ERAI_area)
     print ('******************  choose the fields from target region  *******************')
     # select land-sea mask
@@ -288,10 +288,10 @@ if __name__=="__main__":
     sic_exp = SIC_ERAI_area_series[:,12:36,264:320]
     t2m_exp = T2M_ERAI_series[:,12:36,264:320]
     slp_exp = SLP_ERAI_series[:,12:36,264:320]
-    z500_exp = Z500_ERAI_series[:,12:36,264:320]
+#    z500_exp = Z500_ERAI_series[:,12:36,264:320]
     z850_exp = Z850_ERAI_series[:,12:36,264:320]
-    u10m_exp = U10M_ERAI_series[:,12:36,264:320]
-    v10m_exp = V10M_ERAI_series[:,12:36,264:320]
+#    u10m_exp = U10M_ERAI_series[:,12:36,264:320]
+#    v10m_exp = V10M_ERAI_series[:,12:36,264:320]
     sflux_exp = SFlux_ERAI_area_series[:,12:36,264:320]
     ohc_exp = OHC_300_ORAS4_weekly_series[:,12:36,264:320]
     print ('*******************  pre-processing  *********************')
@@ -299,10 +299,10 @@ if __name__=="__main__":
     sic_exp_norm = dlacs.preprocess.operator.normalize(sic_exp)
     t2m_exp_norm = dlacs.preprocess.operator.normalize(t2m_exp)
     slp_exp_norm = dlacs.preprocess.operator.normalize(slp_exp)
-    z500_exp_norm = dlacs.preprocess.operator.normalize(z500_exp)
+#    z500_exp_norm = dlacs.preprocess.operator.normalize(z500_exp)
     z850_exp_norm = dlacs.preprocess.operator.normalize(z850_exp)
-    u10m_exp_norm = dlacs.preprocess.operator.normalize(u10m_exp)
-    v10m_exp_norm = dlacs.preprocess.operator.normalize(v10m_exp)
+#    u10m_exp_norm = dlacs.preprocess.operator.normalize(u10m_exp)
+#    v10m_exp_norm = dlacs.preprocess.operator.normalize(v10m_exp)
     sflux_exp_norm = dlacs.preprocess.operator.normalize(sflux_exp)
     ohc_exp_norm = dlacs.preprocess.operator.normalize(ohc_exp)
     print('================  save the normalizing factor  =================')
@@ -314,14 +314,14 @@ if __name__=="__main__":
     t2m_min = np.amin(t2m_exp)
     slp_max = np.amax(slp_exp)
     slp_min = np.amin(slp_exp)
-    z500_max = np.amax(z500_exp)
-    z500_min = np.amin(z500_exp)
+#    z500_max = np.amax(z500_exp)
+#    z500_min = np.amin(z500_exp)
     z850_max = np.amax(z850_exp)
     z850_min = np.amin(z850_exp)
-    u10m_max = np.amax(u10m_exp)
-    u10m_min = np.amin(u10m_exp)
-    v10m_max = np.amax(v10m_exp)
-    v10m_min = np.amin(v10m_exp)
+#    u10m_max = np.amax(u10m_exp)
+#    u10m_min = np.amin(u10m_exp)
+#    v10m_max = np.amax(v10m_exp)
+#    v10m_min = np.amin(v10m_exp)
     sflux_max = np.amax(sflux_exp)
     sflux_min = np.amin(sflux_exp)
     print ('====================    A series of time (index)    ====================')
@@ -348,8 +348,8 @@ if __name__=="__main__":
     logging.info("Data preprocessing complete!")
     print ('*******************  create basic dimensions for tensor and network  *********************')
     # specifications of neural network
-    input_channels = 10
-    hidden_channels = [10, 10, 9] # number of channels & hidden layers, the channels of last layer is the channels of output, too
+    input_channels = 7
+    hidden_channels = [7, 7, 6] # number of channels & hidden layers, the channels of last layer is the channels of output, too
     #hidden_channels = [3, 3, 3, 3, 2]
     #hidden_channels = [1]
     kernel_size = 3
@@ -383,7 +383,7 @@ if __name__=="__main__":
     # load model parameters
     model_init = dlacs.ConvLSTM.ConvLSTM(input_channels, hidden_channels, kernel_size).to(device)
     model_init.load_state_dict(torch.load(os.path.join(init_path,
-                               'convlstm_era_sic_t2m_slp_z500_z850_uv10m_sflux_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validAll.pkl'), map_location=device))
+                               'convlstm_era_sic_t2m_slp_z850_sflux_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_500_validAll.pkl'), map_location=device))
     # load entire model
     #model_init = torch.load(os.path.join(init_path, 'convlstm_era_sic_oras_ohc_Barents_hl_3_kernel_3_lr_0.005_epoch_1500_validSIC.pkl'))
     print(model_init)
@@ -441,10 +441,10 @@ if __name__=="__main__":
                                 ohc_exp_norm[timestep,:,:],
                                 t2m_exp_norm[timestep,:,:],
                                 slp_exp_norm[timestep,:,:],
-                                z500_exp_norm[timestep,:,:],
+#                                z500_exp_norm[timestep,:,:],
                                 z850_exp_norm[timestep,:,:],
-                                u10m_exp_norm[timestep,:,:],
-                                v10m_exp_norm[timestep,:,:],
+#                                u10m_exp_norm[timestep,:,:],
+#                                v10m_exp_norm[timestep,:,:],
                                 sflux_exp_norm[timestep,:,:],
                                 month_exp[timestep,:,:])) #vstack,hstack,dstack
             x_var = torch.autograd.Variable(torch.Tensor(x_input).view(-1,input_channels,height,width)).to(device)
@@ -455,10 +455,10 @@ if __name__=="__main__":
                                       ohc_exp_norm[timestep+1,:,:],
                                       t2m_exp_norm[timestep+1,:,:],
                                       slp_exp_norm[timestep+1,:,:],
-                                      z500_exp_norm[timestep+1,:,:],
+#                                      z500_exp_norm[timestep+1,:,:],
                                       z850_exp_norm[timestep+1,:,:],
-                                      u10m_exp_norm[timestep+1,:,:],
-                                      v10m_exp_norm[timestep+1,:,:],
+#                                      u10m_exp_norm[timestep+1,:,:],
+#                                      v10m_exp_norm[timestep+1,:,:],
                                       sflux_exp_norm[timestep+1,:,:])) #vstack,hstack,dstack
             y_var = torch.autograd.Variable(torch.Tensor(y_train_stack).view(-1,hidden_channels[-1],height,width)).to(device)
             #################################################################################   
