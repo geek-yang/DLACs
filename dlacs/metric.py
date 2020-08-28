@@ -289,7 +289,7 @@ def CRPSprob(obs, pred, data_structure="sequencial"):
         # take the mean of CRPS
         CRPS_mean = np.mean(CRPS_int)
         
-    elif data_structure == "spacial":
+    elif data_structure == "spatial":
         #print("Input temporal-spatial sequence")
         ens_pred, t, y, x = pred.shape
         ens_obs, t, y, x = obs.shape
