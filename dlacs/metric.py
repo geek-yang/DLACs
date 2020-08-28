@@ -137,7 +137,6 @@ def precision(pred, label):
     label_dummy_2[label == 0] = 2
     # count False Positive events
     falsePositive = (pred_dummy_2 == label_dummy_2)
-  
     prec_seq = np.sum(np.sum(truePositive.astype(float),2),1) / (np.sum(np.sum(truePositive.astype(float),2),1) +
                                                                  np.sum(np.sum(falsePositive.astype(float),2),1))
         
@@ -192,7 +191,7 @@ def CRPS(obs, pred, data_structure="sequencial"):
         CRPS = (cdf - H) ** 2 * dz
         CRPS_int = np.sum(CRPS, 0)
         CRPS_mean = np.mean(CRPS_int)
-    elif data_structure == "spacial":
+    elif data_structure == "spatial":
         #print("Input temporal-spatial sequence")
         ens, t, y, x = pred.shape
         # sort the forecast matrix following the ensemble axis
