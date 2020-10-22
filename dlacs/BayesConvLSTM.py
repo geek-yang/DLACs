@@ -143,21 +143,21 @@ class BayesConvLSTMCell(nn.Module):
         # generate the convolutional layer for standard deviation - input x filter
         # without bias
         self.Wxi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Whi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Wxf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Whf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Wxc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Whc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Wxo_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)  
+                                                          self.padding, self.dilation, self.groups)  
         self.Who_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         # cell state matrix has no convolutional operation, therefore it has no distribtuion
         self.Wci = None
         self.Wcf = None
@@ -427,13 +427,13 @@ class BayesConvLSTMCell_F(nn.Module):
                                                                    self.padding, self.dilation, self.groups)
         # without bias
         self.Whi_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)
+                                                           self.padding, self.dilation, self.groups)
         self.Whf_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)
+                                                           self.padding, self.dilation, self.groups)
         self.Whc_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)
+                                                           self.padding, self.dilation, self.groups)
         self.Who_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)    
+                                                           self.padding, self.dilation, self.groups)    
         # weight/filter/kernel for the variance factor (alpha) of each gate
         # in order to make sure that the variance is always positive, here we take log(var)
         self.Wxi_log_var = Parameter(torch.Tensor(hidden_channels, input_channels, *self.kernel_size))
@@ -447,21 +447,21 @@ class BayesConvLSTMCell_F(nn.Module):
         # generate the convolutional layer for standard deviation - input x filter
         # without bias
         self.Wxi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Whi_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Wxf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Whf_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Wxc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Whc_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         self.Wxo_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)  
+                                                          self.padding, self.dilation, self.groups)  
         self.Who_std_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												      self.padding, self.dilation, self.groups)
+                                                          self.padding, self.dilation, self.groups)
         # cell state matrix has no convolutional operation, therefore it has no distribtuion
         self.Wci = None
         self.Wcf = None
