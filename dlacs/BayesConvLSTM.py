@@ -1,28 +1,35 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function        : Bayesian Convolutional LSTM for one step prediction
+Function        : Bayesian Convolutional LSTM for sequence to one prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2020.02.18
-Last Update     : 2020.03.27
+Last Update     : 2020.10.21
 Description     : This module provides several methods to perform Bayesian deep learning
                   on climate data. It is designed for weather/climate prediction with 
-                  spatial-temporal sequence data. The main method here is the
-                  Bayesian Convolutional-Long Short Term Memory.
+                  spatial-temporal sequence data. 
+                  
+                  The deep neural network used here is the Bayesian Convolutional-Long Short
+                  Term Memory network, which is constructed with vatiaitional inference and
+                  trained with the Bayes by Backprop. The local reparameterization trick is
+                  applied for the back-propagation of stochastic node.
 
-                  This method is devised based on the reference, namely the Bayes by Backprop:
-                  Blundell, C., Cornebise, J., Kavukcuoglu, K., & Wierstra, D. (2015). Weight uncertainty in
-                  neural networks. arXiv preprint arXiv:1505.05424.
+                  This network is devised based on the reference, namely :
+                  Blundell, C., Cornebise, J., Kavukcuoglu, K., & Wierstra, D. (2015). Weight uncertainty
+                  in neural networks. arXiv preprint arXiv:1505.05424.
+                  
                   Shridhar, K., Laumann, F. and Liwicki, M., 2019. A comprehensive guide to bayesian
                   convolutional neural network with variational inference. arXiv preprint arXiv:1901.02731.
+                  
                   Fortunato, M., Blundell, C. and Vinyals, O., 2017. Bayesian recurrent neural networks.
                   arXiv preprint arXiv:1704.02798.
+                  
 Return Values   : time series / array
-Caveat!         : This module get input as a spatial-temporal sequence and make a prediction for only one step!!
-				  The so-called many to one prediction.
+Caveat!         : This module get input as a spatial-temporal sequence and make a prediction for only
+                  one step!! The so-called many to one (or sequence to one) prediction.
 """
 
-import math
+#import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -37,21 +44,24 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class BayesConvLSTMCell(nn.Module):
     """
     Construction of Bayesian Convolutional LSTM Cell.
-    This is a light weight Bayesian Convolutional LSTM Cell designed by
-    Shridhar, K., Laumann, F. and Liwicki, M., 2019. The variance of Gaussian
-    distribution is modelled with a factor and the square of mean, which reduces
-    weight matrix.
+    This is a Bayesian Convolutional LSTM Cell with local reparameterization trick 
+    designed by Shridhar, K., Laumann, F. and Liwicki, M., 2019. The variance of 
+    Gaussian distribution is modelled with a factor and the square of mean, which is
+    enabled for back-propagation.
+    Since the variance is not an independent variable, we name it as "reduced" cell.
     """
     def __init__(self, input_channels, hidden_channels, kernel_size, weight_dict = None,
                  cell_index = None, alpha_shape=(1,1), stride=1, padding=0, dilation=1, bias=True):
         """
-        Build Bayesian Convolutional LSTM Cell with a distribution over each gate (weights)
+        Build Bayesian Convolutional LSTM Cell with a distribution over each weight matrix
         in the layer. The cell is designed to enable the implementation of back-propagation process.
+        
         param input_channels: number of channels (variables) from input fields
-        param hidden_channels: number of channels inside hidden layers, the dimension correponds to the output size
+        param hidden_channels: number of channels inside hidden layers, the
+        dimension correponds to the output size
         param kernel_size: size of filter, if not a square then need to input a tuple (x,y)
         param weight_dict: weight matrix for the initialization of mu (mean)
-        param cell_index: index of created BayesConvLSTM cell
+        param cell_index: index of created BayesConvLSTM cell, for initialization with given weights
         param alpha_shape: the scalar multiplier
         param stride: number of pixels by which the window moves after each operation
         param padding: number of pixels to preserve the input shape and information from edge
@@ -76,6 +86,7 @@ class BayesConvLSTMCell(nn.Module):
         self.bias = bias
         
         # inherit weight matrix for mu
+        # this used to initialize BayesConvLSTM with ConvLSTM
         self.weight_dict = weight_dict
         self.cell_index = cell_index
 
@@ -96,7 +107,7 @@ class BayesConvLSTMCell(nn.Module):
             self.Wxc_bias = Parameter(torch.Tensor(hidden_channels))
             self.Wxo_bias = Parameter(torch.Tensor(hidden_channels))
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter('bias', None) # method from nn, since bias is learnable parameter
         # generate the convolutional layer for mean - input x filter
         # with bias
         self.Wxi_mean_out = lambda input, kernel, bias_w: F.conv2d(input, kernel, bias_w, self.stride,
@@ -109,15 +120,18 @@ class BayesConvLSTMCell(nn.Module):
                                                                    self.padding, self.dilation, self.groups)
         # without bias
         self.Whi_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)
+                                                           self.padding, self.dilation, self.groups)
         self.Whf_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)
+                                                           self.padding, self.dilation, self.groups)
         self.Whc_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)
+                                                           self.padding, self.dilation, self.groups)
         self.Who_mean_out = lambda input, kernel: F.conv2d(input, kernel, None, self.stride,
-    												       self.padding, self.dilation, self.groups)    
+                                                           self.padding, self.dilation, self.groups)    
         # weight/filter/kernel for the variance factor (alpha) of each gate
         # in order to make sure that the variance is always positive, here we take log(alpha)
+        # About its definition, see: 
+        # Shridhar, K., Laumann, F. and Liwicki, M., 2019. A comprehensive guide to bayesian
+        # convolutional neural network with variational inference. arXiv preprint arXiv:1901.02731.
         self.Wxi_log_alpha = Parameter(torch.Tensor(*alpha_shape))
         self.Whi_log_alpha = Parameter(torch.Tensor(*alpha_shape))
         self.Wxf_log_alpha = Parameter(torch.Tensor(*alpha_shape))
@@ -214,6 +228,8 @@ class BayesConvLSTMCell(nn.Module):
         param x: input variable
         param h: hidden state
         param c: cell state
+        param training: determine whether it in training mode or prediction mode.
+                        options are "True" and "False".
 
         Note: the Gaussian sampling process follow the euqation (7) in
         Shridhar et. al. 2019.
@@ -332,9 +348,17 @@ class BayesConvLSTMCell(nn.Module):
 
 class BayesConvLSTMCell_F(nn.Module):
     """
-    Construction of Bayesian Convolutional LSTM Cell.
-    This is a full size Bayesian Convolutional LSTM Cell. The variance and mean of 
-    Gaussian distribution are represented by two independent weight matrix.
+    Construction of Bayesian Convolutional LSTM Cell with experimental settings.
+    Caveat! This class is kept for integrating new features to the BayesConvLSTM
+    cell and therefore it is only meant for testing!! In case you want to use the existing
+    setup from Shridhar et. al. 2019, use the class "BayesConvLSTMCell".
+    
+    Current setup:
+    This is a Bayesian Convolutional LSTM Cell defiend with the variance and mean of 
+    Gaussian distribution represented by two independent weight matrix. It is different
+    from the configuration introduced by Shridhar et. al. 2019.
+    
+    Since the variance is an independent variable in this case, we name it as "full" cell.
     """
     def __init__(self, input_channels, hidden_channels, kernel_size, weight_dict = None,
                  cell_index = None, stride=1, padding=0, dilation=1, bias=True):
@@ -508,7 +532,7 @@ class BayesConvLSTMCell_F(nn.Module):
         param h: hidden state
         param c: cell state
 
-        Note: the Gaussian sampling process follow the euqation (7) in
+        Note: the Gaussian sampling process is DIFFERENT! from the euqation (7) in
         Shridhar et. al. 2019.
         """
         # local parameterization trick
@@ -625,8 +649,8 @@ class BayesConvLSTMCell_F(nn.Module):
     
 class BayesConvLSTM(nn.Module):
     """
-    This is the main BayesConvLSTM module.
-
+    This is the main BayesConvLSTM module. It serves to construct the BayesConvLSTM
+    with BayesConvLSTM cells defined in this module.
     """
     # input_channels corresponds to the first input feature map
     # hidden state is a list of succeeding lstm layers.
@@ -638,7 +662,7 @@ class BayesConvLSTM(nn.Module):
         param step: this parameter indicates the time step to predict ahead of the given data
         param effective_step: this parameter determines the source of the final output from the chosen step
         param cell_type: determines the type of cell to be used by the neural network, options are
-                     "reduced" and "full"
+                         "reduced" and "full", in terms of the definition for variance in Gaussian.
         param weight_dict: weight matrix of trained models
         """
         super(BayesConvLSTM, self).__init__()
@@ -657,6 +681,7 @@ class BayesConvLSTM(nn.Module):
                 if weight_dict is None:
                     cell = BayesConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size)
                 else:
+                    #initialize model with given weight matrix (only for the mean of each weight distribution)
                     cell = BayesConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size,
                                              weight_dict, i)
             elif cell_type == "full":
@@ -675,7 +700,10 @@ class BayesConvLSTM(nn.Module):
         Forward module of ConvLSTM. The computation of KL-divergence in each layer is performed
         and the results will be aggregated.
         param x: input data with dimensions [batch size, channel, height, width]
-        param timestep: only execute the initialization for the first timestep
+        param timestep: tell the module what is the current time step.
+                        the module only performs the initialization for the first timestep
+        param training: determine whether it in training mode or prediction mode.
+                        options are "True" and "False".
         """
         # define the type of forward
         self.training = training # training is boolean

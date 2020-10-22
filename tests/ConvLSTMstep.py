@@ -4,7 +4,7 @@ Copyright Netherlands eScience Center
 Function        : Convolutional LSTM for multiple steps prediction
 Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2019.05.21
-Last Update     : 2019.05.21
+Last Update     : 2019.10.25
 Contributor     :
 Description     : This module provides several methods to perform deep learning
                   on climate data. It is designed for weather/climate prediction with

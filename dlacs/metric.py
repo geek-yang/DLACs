@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 Copyright Netherlands eScience Center
-Function       : Evaluation matrix
-Author         : Yang Liu (y.liu@esciencecenter.nl)
+Function        : Evaluation metrics
+Author          : Yang Liu (y.liu@esciencecenter.nl)
 First Built     : 2020.04.01
 Last Update     : 2020.05.05
 Contributor     :
 Description     : This scripts provides the basic functions, which will be used by other modules.
-Return Values    : time series / array
-Caveat!        :
+Return Values   : time series / array
+Caveat!         :
 """
 
 import math
