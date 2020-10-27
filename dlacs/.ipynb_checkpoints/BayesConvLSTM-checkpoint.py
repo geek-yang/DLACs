@@ -65,13 +65,13 @@ class BayesConvLSTMCell(nn.Module):
         param alpha_shape: the scalar multiplier
         param stride: number of pixels by which the window moves after each operation
         param padding: number of pixels to preserve the input shape and information from edge
-	    param dilation: controls the spacing between the kernel points
-	    param bias: an additive bias
+        param dilation: controls the spacing between the kernel points
+        param bias: an additive bias
 
-	    Caveat: This module is customized using basic modules from pytorch. Therefore, we need to
-	            create the weight, bias and kernel matrix ourself. The learnable variables are mu
+        Caveat: This module is customized using basic modules from pytorch. Therefore, we need to
+                create the weight, bias and kernel matrix ourself. The learnable variables are mu
                 and alpha in this case, which is chosen with local reparameterization trick.
-	            We are optimizing the out_bias & out_nobias matrix, which contain the weight we need.
+                We are optimizing the out_bias & out_nobias matrix, which contain the weight we need.
         """
         super(BayesConvLSTMCell, self).__init__()
         #assert hidden_channels % 2 == 0
