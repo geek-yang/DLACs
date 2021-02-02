@@ -19,7 +19,8 @@ Folder structure of the repositary:<br>
 * `examples` Including python scripts showing the whole workflow of training and forecasting with BayesConvLSTM in DLACs
 * `init` Sample ConvLSTM neural network used to initialize BayesConvLSTM
 * `models` Examples of trained BayesConvLSTM neural networks
-* `tests` Unit testing, functional testing and integration testing shown in jupyter notebooks 
+* `tests` Unit testing, functional testing and integration testing shown in jupyter notebooks
+* `data` Forecast data with BayesLSTM and Variational Auto-Regressive Model
 
 ## Modules :floppy_disk:
 Directory structure:<br>
