@@ -60,10 +60,10 @@ class savenc:
         lead_wrap_var.long_name = 'lead time'
         pred_wrap_var.long_name = 'predictand'
         # writing data
-        week_wrap_var[:] = week
-        lead_wrap_var[:] = lead
-        lat_wrap_var[:] = lat
-        lon_wrap_var[:] = lon
+        week_wrap_var[:] = np.arange(week)
+        lead_wrap_var[:] = np.arange(lead)
+        lat_wrap_var[:] = np.arange(lat)
+        lon_wrap_var[:] = np.arange(lon)
         pred_wrap_var[:] = numpyMatrix
         # close the file
         data_wrap.close()
@@ -98,9 +98,9 @@ class savenc:
         time_wrap_var.long_name = 'time span'
         lead_wrap_var.long_name = 'lead time'
         # writing data
-        var_wrap_var[:] = var
-        time_wrap_var[:] = time
-        lead_wrap_var[:] = lead
+        var_wrap_var[:] = np.arange(var)
+        time_wrap_var[:] = np.arange(time)
+        lead_wrap_var[:] = np.arange(lead)
         series_wrap_var[:] = numpyMatrix
         # close the file
         data_wrap.close()
