@@ -48,7 +48,8 @@ DLACs is tested on python 3.6 and has the following dependencies:<br>
 Clone the repositary and add the repositary folder to your python system path, or just go to the repositary folder and run the following command after downloading:<br>
 `python setup.py install` <br/>
 For testing, please run:<br>
-`python setup.py develop`
+`python setup.py develop`<br/>
+Note that this repository is still under construction. In case you find any bug or want to contact the author, please raise an issue and leave your comments.
 
 ## Cite our work :gift_heart:
 DOI:10.5281/zenodo.3722946
