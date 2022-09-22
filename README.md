@@ -52,4 +52,4 @@ For testing, please run:<br>
 Note that this repository is still under construction. In case you find any bug or want to contact the author, please raise an issue and leave your comments.
 
 ## Cite our work :gift_heart:
-DOI:10.5281/zenodo.3722946
+Liu, Y. (2021). Arctic weather and climate: from mechanisms to forecasts. Wageningen University. https://doi.org/10.18174/545045
